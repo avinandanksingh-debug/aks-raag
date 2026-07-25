@@ -1,0 +1,53 @@
+{
+  "name": "aks-raag",
+  "productName": "Aks Raag",
+  "version": "1.0.0",
+  "description": "Aks Raag Music Streaming Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build:backend": "cd backend && npm install",
+    "dist": "npm run build:frontend && npm run build:backend && electron-builder"
+  },
+  "author": "Avinandan Singh",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^31.3.1",
+    "electron-builder": "^24.13.3",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.aksraag.app",
+    "productName": "Aks Raag",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "backend/**/*",
+      "backend/.env",
+      "frontend/dist/**/*",
+      "!frontend/node_modules/**/*",
+      "!frontend/src/**/*",
+      "!backend/cache/**/*",
+      "!**/*.log"
+    ],
+    "asarUnpack": [
+      "backend/node_modules/youtube-dl-exec/**/*",
+      "backend/node_modules/ffmpeg-static/**/*",
+      "backend/node_modules/@ffmpeg-installer/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

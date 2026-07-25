@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Secrets & Environment variables
+.env
+backend/.env
+frontend/.env
+*.jks
+*.keystore
+keystore.properties
+frontend/android/keystore.properties
+
+# Build outputs
+dist/
+frontend/dist/
+frontend/android/app/build/
+frontend/android/build/
+AksRaag_v3_APK/
+
+# IDE & OS files
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,124 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at top left, #1a1a24, #0d0d0f);
+}
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding: 12px;
+  gap: 12px;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 24px;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.nav-item:hover, .nav-item.active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active {
+  color: var(--accent-color);
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  border-radius: 12px;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Player Bar */
+.player-bar {
+  height: 90px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--panel-border);
+  background: #0d0d0f; /* Solid background at bottom */
+  z-index: 100;
+}
+
+/* Login Page */
+.login-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: radial-gradient(circle at center, #1a1a24, #0d0d0f);
+  text-align: center;
+  padding: 40px;
+}
+
+.login-title {
+  font-size: 48px;
+  margin-bottom: 16px;
+  background: linear-gradient(90deg, #ffffff, #a0a0a5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-subtitle {
+  font-size: 18px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  max-width: 500px;
+}
+
+.login-button {
+  background-color: var(--accent-color);
+  color: #000;
+  padding: 16px 48px;
+  border-radius: 32px;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.login-button:hover {
+  background-color: var(--accent-hover);
+  transform: scale(1.05);
+}

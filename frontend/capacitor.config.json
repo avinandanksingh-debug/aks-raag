@@ -1,0 +1,13 @@
+{
+  "appId": "com.aksraag.app",
+  "appName": "Aks Raag",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Browser": {
+      "presentationStyle": "popover"
+    }
+  }
+}

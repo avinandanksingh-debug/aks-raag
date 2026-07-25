@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: aks-raag
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SPOTIFY_CLIENT_ID
+        value: afe50167e9a44d7fb99dfe22a75cbe4a
+      - key: SPOTIFY_CLIENT_SECRET
+        value: baaff70d77284be5a44002397e56c447
+      - key: SPOTIFY_REDIRECT_URI
+        value: https://aks-raag.onrender.com/api/auth/callback
+      - key: FRONTEND_URL
+        value: https://aks-raag.onrender.com
+      - key: SESSION_SECRET
+        value: a_very_secret_key_for_cookies_prod

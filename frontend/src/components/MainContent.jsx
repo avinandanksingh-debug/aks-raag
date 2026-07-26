@@ -14,9 +14,24 @@ const MainContent = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [recentSearches, setRecentSearches] = useState([]);
     
-    // Cache state
+    // Cache & Featured state
     const [cachedSongs, setCachedSongs] = useState([]);
     const [youtubeFeatured, setYoutubeFeatured] = useState([]);
+
+    // Fetch featured playlists on mount so featured content is always ready
+    useEffect(() => {
+        const loadFeatured = async () => {
+            try {
+                const ytRes = await axios.get(`${getApiBase()}/api/youtube/featured-playlists`).catch(() => null);
+                if (ytRes && ytRes.data?.playlists) {
+                    setYoutubeFeatured(ytRes.data.playlists);
+                }
+            } catch (e) {
+                console.error('Failed to load featured playlists', e);
+            }
+        };
+        loadFeatured();
+    }, []);
 
     useEffect(() => {
         const fetchViewData = async () => {
@@ -73,18 +88,17 @@ const MainContent = () => {
                             items = res.data.items || [];
                         }
                     }
-                    setTracks(items);
-                } else if (activeView.type === 'library') {
-                    // Fetch YouTube Featured Playlists to ensure library is never empty
-                    try {
-                        const ytRes = await axios.get(`${getApiBase()}/api/youtube/featured-playlists`).catch(() => null);
-                        if (ytRes && ytRes.data?.playlists) {
-                            setYoutubeFeatured(ytRes.data.playlists);
-                        }
-                    } catch (e) {
-                        console.error('Failed to fetch featured playlists', e);
+
+                    // Fallback to searching YouTube if playlist items are empty
+                    if (items.length === 0 && activeView.name) {
+                        try {
+                            const ytRes = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(activeView.name)}`);
+                            items = (ytRes.data.results || []).map(t => ({ track: t }));
+                        } catch (e) {}
                     }
 
+                    setTracks(items);
+                } else if (activeView.type === 'library') {
                     const savedSearches = localStorage.getItem('aks_raag_recent_searches');
                     if (savedSearches) {
                         try {
@@ -103,7 +117,7 @@ const MainContent = () => {
         };
 
         fetchViewData();
-    }, [activeView]);
+    }, [activeView, youtubeFeatured]);
 
     const fetchCache = async () => {
         try {
@@ -178,7 +192,7 @@ const MainContent = () => {
             const pl = playlists.find(p => p.id === activeView.id) || youtubeFeatured.find(p => p.id === activeView.id);
             return { title: pl ? pl.name : 'Playlist', subtitle: pl ? `By ${pl.owner?.display_name || 'Aks Raag'}` : '' };
         }
-        return { title: 'Aks Raag', subtitle: '' };
+        return { title: 'Aks Raag', subtitle: 'Ad-Free High Quality Audio Streaming' };
     };
 
     const details = getHeaderDetails();
@@ -214,7 +228,7 @@ const MainContent = () => {
                         <button className="clear-cache-btn" onClick={handleClearCache}>Clear Cache</button>
                     </div>
                 </div>
-            ) : activeView.type === 'library' ? (
+            ) : activeView.type === 'library' || activeView.type === 'home' ? (
                 <div className="library-view-container">
                     <div 
                         className="library-card liked-songs-card"
@@ -228,65 +242,63 @@ const MainContent = () => {
                     </div>
 
                     {/* Spotify User Playlists */}
-                    <h2 className="library-section-title">Your Spotify Playlists</h2>
-                    <div className="playlist-grid">
-                        {playlists.length > 0 ? (
-                            playlists.map(pl => (
-                                <div 
-                                    key={pl.id} 
-                                    className="playlist-card"
-                                    onClick={() => setActiveView({ type: 'playlist', id: pl.id })}
-                                >
-                                    <div className="playlist-cover-wrap">
-                                        {pl.images?.[0]?.url ? (
-                                            <img src={pl.images[0].url} alt={pl.name} className="playlist-cover" />
-                                        ) : (
-                                            <div className="playlist-cover-placeholder">
-                                                <ListMusic size={32} color="#888" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <h4 className="playlist-card-name">{pl.name}</h4>
-                                    <p className="playlist-card-tracks">{pl.tracks?.total || 0} Tracks</p>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="empty-playlists-msg">
-                                Connect Spotify or add playlists to see them here.
-                            </div>
-                        )}
-                    </div>
-
-                    {/* YouTube Featured Playlists */}
-                    {youtubeFeatured.length > 0 && (
+                    {playlists.length > 0 && (
                         <>
-                            <h2 className="library-section-title" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Sparkles size={20} color="#1ed760" />
-                                <span>Featured Music Playlists</span>
-                            </h2>
+                            <h2 className="library-section-title">Your Spotify Playlists</h2>
                             <div className="playlist-grid">
-                                {youtubeFeatured.map(pl => (
+                                {playlists.map(pl => (
                                     <div 
                                         key={pl.id} 
                                         className="playlist-card"
-                                        onClick={() => setActiveView({ type: 'playlist', id: pl.id })}
+                                        onClick={() => setActiveView({ type: 'playlist', id: pl.id, name: pl.name })}
                                     >
                                         <div className="playlist-cover-wrap">
                                             {pl.images?.[0]?.url ? (
                                                 <img src={pl.images[0].url} alt={pl.name} className="playlist-cover" />
                                             ) : (
                                                 <div className="playlist-cover-placeholder">
-                                                    <ListMusic size={32} color="#888" />
+                                                    <ListMusic size={28} color="#888" />
                                                 </div>
                                             )}
                                         </div>
                                         <h4 className="playlist-card-name">{pl.name}</h4>
-                                        <p className="playlist-card-tracks">Top Curated Tracks</p>
+                                        <p className="playlist-card-tracks">{pl.tracks?.total || 0} Tracks</p>
                                     </div>
                                 ))}
                             </div>
                         </>
                     )}
+
+                    {/* YouTube Featured Playlists */}
+                    <h2 className="library-section-title" style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={20} color="#1ed760" />
+                        <span>Featured Playlists</span>
+                    </h2>
+                    <div className="playlist-grid">
+                        {youtubeFeatured.length > 0 ? (
+                            youtubeFeatured.map(pl => (
+                                <div 
+                                    key={pl.id} 
+                                    className="playlist-card"
+                                    onClick={() => setActiveView({ type: 'playlist', id: pl.id, name: pl.name })}
+                                >
+                                    <div className="playlist-cover-wrap">
+                                        {pl.images?.[0]?.url ? (
+                                            <img src={pl.images[0].url} alt={pl.name} className="playlist-cover" />
+                                        ) : (
+                                            <div className="playlist-cover-placeholder">
+                                                <ListMusic size={28} color="#888" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h4 className="playlist-card-name">{pl.name}</h4>
+                                    <p className="playlist-card-tracks">Featured Music</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div style={{ color: 'var(--text-secondary)', padding: '12px' }}>Loading featured music playlists...</div>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div className="song-list">

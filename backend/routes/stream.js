@@ -10,12 +10,10 @@ const stream = require('stream');
 
 const router = express.Router();
 
-// Set the ffmpeg path
 if (ffmpegStatic) {
     ffmpeg.setFfmpegPath(ffmpegStatic);
 }
 
-// Cache directory
 let _cacheDir = null;
 function getCacheDir() {
     if (!_cacheDir) {
@@ -27,7 +25,7 @@ function getCacheDir() {
     return _cacheDir;
 }
 
-// Get all cached items
+// Get cached items
 router.get('/cache', (req, res) => {
     try {
         const files = fs.readdirSync(getCacheDir());
@@ -109,32 +107,46 @@ router.get('/play', async (req, res) => {
             videoUrl = videoInfo.url;
         }
 
-        const isSeek = start && !isNaN(parseFloat(start)) && parseFloat(start) > 0;
         const hash = crypto.createHash('md5').update(videoUrl).digest('hex');
         const mp3Path = path.join(getCacheDir(), `${hash}.mp3`);
         const metaPath = path.join(getCacheDir(), `${hash}.json`);
 
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Transfer-Encoding', 'chunked');
-
-        // Check if the file is already cached locally
+        // Check if cached MP3 exists
         if (fs.existsSync(mp3Path)) {
             console.log(`[Cache Hit] Streaming local file for: ${videoUrl}`);
-            if (isSeek) {
-                let command = ffmpeg(mp3Path)
-                    .setStartTime(parseFloat(start))
-                    .format('mp3')
-                    .audioBitrate(192)
-                    .on('error', (err) => console.error('FFmpeg local seek error:', err.message));
-                command.pipe(res, { end: true });
+            const stat = fs.statSync(mp3Path);
+            const fileSize = stat.size;
+            const range = req.headers.range;
+
+            if (range) {
+                const parts = range.replace(/bytes=/, "").split("-");
+                const startByte = parseInt(parts[0], 10);
+                const endByte = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+                const chunksize = (endByte - startByte) + 1;
+                const file = fs.createReadStream(mp3Path, { start: startByte, end: endByte });
+
+                res.writeHead(206, {
+                    'Content-Range': `bytes ${startByte}-${endByte}/${fileSize}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': 'audio/mpeg',
+                });
+                file.pipe(res);
             } else {
-                const readStream = fs.createReadStream(mp3Path);
-                readStream.pipe(res);
+                res.writeHead(200, {
+                    'Content-Length': fileSize,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Type': 'audio/mpeg',
+                });
+                fs.createReadStream(mp3Path).pipe(res);
             }
             return;
         }
 
         console.log(`[Cache Miss] Streaming via ytdl-core: ${videoUrl}`);
+
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Accept-Ranges', 'bytes');
 
         try {
             const audioStream = ytdl(videoUrl, { 
@@ -150,28 +162,23 @@ router.get('/play', async (req, res) => {
                     console.error('FFmpeg error:', err.message);
                 });
 
-            if (isSeek) {
-                command = command.setStartTime(parseFloat(start));
-                command.pipe(res, { end: true });
-            } else {
-                const pt = new stream.PassThrough();
-                command.pipe(pt);
-                pt.pipe(res, { end: true });
+            const pt = new stream.PassThrough();
+            command.pipe(pt);
+            pt.pipe(res, { end: true });
 
-                const fileStream = fs.createWriteStream(mp3Path);
-                pt.pipe(fileStream);
+            const fileStream = fs.createWriteStream(mp3Path);
+            pt.pipe(fileStream);
 
-                fs.writeFileSync(metaPath, JSON.stringify({
-                    track: trackName,
-                    artist: artistName,
-                    videoUrl: videoUrl,
-                    savedAt: new Date().toISOString()
-                }));
+            fs.writeFileSync(metaPath, JSON.stringify({
+                track: trackName,
+                artist: artistName,
+                videoUrl: videoUrl,
+                savedAt: new Date().toISOString()
+            }));
 
-                fileStream.on('error', () => {
-                    if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
-                });
-            }
+            fileStream.on('error', () => {
+                if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
+            });
         } catch (streamErr) {
             console.error('ytdl-core audio extraction error:', streamErr.message);
             if (!res.headersSent) {

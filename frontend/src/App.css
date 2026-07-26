@@ -558,6 +558,14 @@ body {
   border-radius: 2px;
 }
 
+.volume-percent-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  width: 32px;
+  text-align: right;
+  font-weight: 500;
+}
+
 .timer-dropdown {
   position: absolute;
   bottom: 100%;

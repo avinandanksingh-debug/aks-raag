@@ -11,7 +11,11 @@ const Player = () => {
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(() => {
         const savedVol = localStorage.getItem('aks_raag_volume');
-        return savedVol ? parseFloat(savedVol) : 0.8;
+        if (savedVol !== null) {
+            const parsed = parseFloat(savedVol);
+            if (!isNaN(parsed)) return parsed;
+        }
+        return 0.25; // Always start at 25% default
     });
 
     const [sleepTimer, setSleepTimer] = useState(null);
@@ -175,7 +179,7 @@ const Player = () => {
                 </div>
             </div>
 
-            {/* Right Tools (Volume, Sleep Timer, Autoplay) */}
+            {/* Right Tools (Volume with percentage text, Sleep Timer, Autoplay) */}
             <div className="player-right desktop-only">
                 <button onClick={() => setAutoplay(!autoplay)} className={`icon-btn ${autoplay ? 'active' : ''}`} title="AI Autoplay">
                     <Radio size={18} />
@@ -200,6 +204,7 @@ const Player = () => {
                     <div className="volume-bar-bg" onClick={handleVolume}>
                         <div className="volume-bar-fill" style={{ width: `${volume * 100}%` }} />
                     </div>
+                    <span className="volume-percent-text">{Math.round(volume * 100)}%</span>
                 </div>
             </div>
         </div>

@@ -231,7 +231,7 @@ const Login = () => {
                     <input 
                         type="text" 
                         value={serverUrlInput}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => setServerUrlInput(e.target.value)}
                         placeholder={defaultUrlLabel}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', background: '#121212', border: '1px solid #444', color: '#fff', fontSize: '13px', boxSizing: 'border-box', marginBottom: '12px' }}
                     />

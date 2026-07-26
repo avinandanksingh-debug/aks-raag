@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import spotifyApi from '../spotifyApi';
 import { getApiBase } from '../config';
 
 export const SpotifyContext = createContext();
@@ -9,7 +9,7 @@ export const SpotifyProvider = ({ children }) => {
     const [playlists, setPlaylists] = useState([]);
     
     // View state
-    const [activeView, setActiveView] = useState({ type: 'liked' });
+    const [activeView, setActiveView] = useState({ type: 'library' });
     const [currentContext, setCurrentContext] = useState(null);
     
     // Player state
@@ -27,30 +27,33 @@ export const SpotifyProvider = ({ children }) => {
 
             if (directToken) {
                 try {
-                    const userRes = await axios.get('https://api.spotify.com/v1/me', {
+                    // Use spotifyApi which has the auto-refresh interceptor
+                    const userRes = await spotifyApi.get('https://api.spotify.com/v1/me', {
                         headers: { Authorization: `Bearer ${directToken}` }
                     });
                     setUser(userRes.data);
 
-                    const playlistRes = await axios.get('https://api.spotify.com/v1/me/playlists?limit=50', {
+                    const playlistRes = await spotifyApi.get('https://api.spotify.com/v1/me/playlists?limit=50', {
                         headers: { Authorization: `Bearer ${directToken}` }
                     });
                     setPlaylists(playlistRes.data.items || []);
                     return;
                 } catch (err) {
-                    console.warn("Direct Spotify API token expired or invalid:", err);
+                    console.warn("Spotify API failed (token may be fully expired):", err.message);
                     if (err.response?.status === 401) {
+                        // Token refresh was already attempted by interceptor and failed
                         localStorage.removeItem('spotify_access_token');
                     }
                 }
             }
 
+            // Fallback to backend proxy (cookie-based auth)
             try {
                 const apiBase = getApiBase();
-                const userRes = await axios.get(`${apiBase}/api/spotify/me`, { withCredentials: true, timeout: 5000 });
+                const userRes = await spotifyApi.get(`${apiBase}/api/spotify/me`, { withCredentials: true, timeout: 8000 });
                 setUser(userRes.data);
 
-                const playlistRes = await axios.get(`${apiBase}/api/spotify/playlists`, { withCredentials: true, timeout: 5000 });
+                const playlistRes = await spotifyApi.get(`${apiBase}/api/spotify/playlists`, { withCredentials: true, timeout: 8000 });
                 setPlaylists(playlistRes.data.items || []);
             } catch (error) {
                 console.warn("Backend auth check failed:", error?.message);
@@ -87,10 +90,10 @@ export const SpotifyProvider = ({ children }) => {
                     nextIndex = 0;
                 } else {
                     if (autoplay && currentTrack?.artists?.[0]?.name) {
-                        const directToken = localStorage.getItem('spotify_access_token');
-                        if (directToken) {
-                            axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(currentTrack.artists[0].name)}&type=track&limit=5`, {
-                                headers: { Authorization: `Bearer ${directToken}` }
+                        const token = localStorage.getItem('spotify_access_token');
+                        if (token) {
+                            spotifyApi.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(currentTrack.artists[0].name)}&type=track&limit=5`, {
+                                headers: { Authorization: `Bearer ${token}` }
                             })
                             .then(res => {
                                 const tracks = res.data.tracks?.items || [];
@@ -98,7 +101,7 @@ export const SpotifyProvider = ({ children }) => {
                                     const newTrack = tracks[Math.floor(Math.random() * tracks.length)];
                                     setCurrentTrack(newTrack);
                                 }
-                            });
+                            }).catch(() => {});
                         }
                     }
                     setIsPlaying(false);
@@ -126,8 +129,9 @@ export const SpotifyProvider = ({ children }) => {
     const logout = async () => {
         try {
             localStorage.removeItem('spotify_access_token');
+            localStorage.removeItem('spotify_refresh_token');
             const apiBase = getApiBase();
-            await axios.post(`${apiBase}/api/auth/logout`, {}, { withCredentials: true }).catch(() => {});
+            await spotifyApi.post(`${apiBase}/api/auth/logout`, {}, { withCredentials: true }).catch(() => {});
             setUser(null);
             setPlaylists([]);
             setCurrentTrack(null);

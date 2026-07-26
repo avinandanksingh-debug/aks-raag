@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import spotifyApi from '../spotifyApi';
 import axios from 'axios';
 import { getApiBase } from '../config';
 import { SpotifyContext } from '../context/SpotifyContext';
@@ -22,7 +23,7 @@ const MainContent = () => {
     useEffect(() => {
         const loadFeatured = async () => {
             try {
-                const ytRes = await axios.get(`${getApiBase()}/api/youtube/featured-playlists`).catch(() => null);
+                const ytRes = await axios.get(`${getApiBase()}/api/youtube/featured-playlists`, { timeout: 25000 }).catch(() => null);
                 if (ytRes && ytRes.data?.playlists) {
                     setYoutubeFeatured(ytRes.data.playlists);
                 }
@@ -45,47 +46,53 @@ const MainContent = () => {
                     let items = [];
                     if (directToken) {
                         try {
-                            const res = await axios.get('https://api.spotify.com/v1/me/tracks?limit=50', {
+                            // Uses spotifyApi with auto-refresh interceptor
+                            const res = await spotifyApi.get('https://api.spotify.com/v1/me/tracks?limit=50', {
                                 headers: { Authorization: `Bearer ${directToken}` }
                             });
                             items = res.data.items || [];
                         } catch (err) {
-                            console.warn("Direct Spotify API failed for liked songs, using backend proxy:", err.message);
+                            console.warn("Spotify API failed for liked songs:", err.message);
                         }
                     }
                     if (items.length === 0) {
+                        const freshToken = localStorage.getItem('spotify_access_token');
                         const res = await axios.get(`${getApiBase()}/api/spotify/tracks`, { 
                             withCredentials: true,
-                            headers: directToken ? { Authorization: `Bearer ${directToken}` } : {}
+                            headers: freshToken ? { Authorization: `Bearer ${freshToken}` } : {},
+                            timeout: 10000,
                         }).catch(() => ({ data: {} }));
                         items = res.data.items || [];
                     }
                     setTracks(items);
                 } else if (activeView.type === 'playlist' && activeView.id) {
                     let items = [];
-                    // 1. YouTube Featured Playlist
+                    
+                    // YouTube Featured Playlist (id starts with yt-)
                     if (activeView.id.startsWith('yt-')) {
                         const featuredPl = youtubeFeatured.find(p => p.id === activeView.id);
                         if (featuredPl) {
                             items = featuredPl.tracks?.items || [];
                         }
                     } else {
-                        // 2. Spotify User Playlist Tracks (Direct Spotify API)
+                        // Spotify User Playlist — Direct API with auto-refresh
                         if (directToken) {
                             try {
-                                const res = await axios.get(`https://api.spotify.com/v1/playlists/${activeView.id}/tracks?limit=50`, {
+                                const res = await spotifyApi.get(`https://api.spotify.com/v1/playlists/${activeView.id}/tracks?limit=50`, {
                                     headers: { Authorization: `Bearer ${directToken}` }
                                 });
                                 items = res.data.items || [];
                             } catch (err) {
-                                console.warn("Direct Spotify API failed for playlist tracks, attempting backend proxy:", err.message);
+                                console.warn("Spotify API failed for playlist tracks:", err.message);
                             }
                         }
-                        // 3. Spotify User Playlist Tracks (Backend Proxy)
+                        // Backend proxy fallback
                         if (items.length === 0) {
+                            const freshToken = localStorage.getItem('spotify_access_token');
                             const res = await axios.get(`${getApiBase()}/api/spotify/playlists/${activeView.id}/tracks`, { 
                                 withCredentials: true,
-                                headers: directToken ? { Authorization: `Bearer ${directToken}` } : {}
+                                headers: freshToken ? { Authorization: `Bearer ${freshToken}` } : {},
+                                timeout: 10000,
                             }).catch(() => ({ data: {} }));
                             items = res.data.items || [];
                         }
@@ -121,22 +128,22 @@ const MainContent = () => {
         try {
             if (directToken) {
                 try {
-                    const res = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`, {
+                    const res = await spotifyApi.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`, {
                         headers: { Authorization: `Bearer ${directToken}` }
                     });
                     const searchResults = (res.data.tracks?.items || []).map(track => ({ track }));
                     setTracks(searchResults);
+                    setActiveView({ type: 'search', query: searchQuery });
                     return;
                 } catch (err) {
-                    console.warn("Direct Spotify search failed, using YouTube search fallback:", err.message);
+                    console.warn("Spotify search failed, falling back to YouTube:", err.message);
                 }
             }
 
             const res = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(searchQuery)}`);
-            const ytTracks = (res.data.results || []).map(item => ({
-                track: item
-            }));
+            const ytTracks = (res.data.results || []).map(item => ({ track: item }));
             setTracks(ytTracks);
+            setActiveView({ type: 'search', query: searchQuery });
         } catch (error) {
             console.error("Search failed", error);
             setErrorMsg("Search failed. Check connection.");
@@ -160,8 +167,9 @@ const MainContent = () => {
 
     const getHeaderDetails = () => {
         if (activeView.type === 'liked') return { title: 'Liked Songs', subtitle: 'Your favorite tracks' };
-        if (activeView.type === 'library') return { title: 'Your Library', subtitle: 'Your Playlists & Featured Collections' };
+        if (activeView.type === 'library' || activeView.type === 'home') return { title: 'Your Library', subtitle: 'Your Playlists & Featured Collections' };
         if (activeView.type === 'settings') return { title: 'Settings', subtitle: 'Server, Audio Quality & Account Settings' };
+        if (activeView.type === 'search') return { title: `Search: ${activeView.query}`, subtitle: 'Search Results' };
         if (activeView.type === 'playlist') {
             const pl = playlists.find(p => p.id === activeView.id) || youtubeFeatured.find(p => p.id === activeView.id);
             return { title: pl ? pl.name : (activeView.name || 'Playlist'), subtitle: 'Playlist Tracks' };
@@ -170,6 +178,9 @@ const MainContent = () => {
     };
 
     const details = getHeaderDetails();
+
+    // Determine if we should show the track list view
+    const showTrackList = activeView.type === 'liked' || activeView.type === 'playlist' || activeView.type === 'search';
 
     return (
         <div className="main-content">
@@ -195,7 +206,51 @@ const MainContent = () => {
 
             {activeView.type === 'settings' ? (
                 <SettingsPanel user={user} logout={logout} />
-            ) : activeView.type === 'library' || activeView.type === 'home' ? (
+            ) : showTrackList ? (
+                <div className="song-list">
+                    {loading ? (
+                        <div style={{ color: 'var(--text-secondary)', padding: '20px' }}>Loading tracks...</div>
+                    ) : errorMsg ? (
+                        <div style={{ color: '#f44336', padding: '20px' }}>{errorMsg}</div>
+                    ) : tracks.length > 0 ? (
+                        tracks.map((item, index) => {
+                            const track = item.track || item;
+                            const isCurrentTrack = currentTrack?.id === track.id;
+
+                            return (
+                                <div 
+                                    key={track.id || index} 
+                                    className={`song-row ${isCurrentTrack ? 'active-track' : ''}`}
+                                    onClick={() => {
+                                        addToRecent(track);
+                                        playQueue(tracks.map(t => t.track || t), index);
+                                    }}
+                                >
+                                    <div className="song-index">{index + 1}</div>
+                                    <img 
+                                        src={track.album?.images?.[0]?.url || 'https://via.placeholder.com/48'} 
+                                        alt={track.name} 
+                                        className="song-img"
+                                    />
+                                    <div className="song-details">
+                                        <div className="song-title">{track.name}</div>
+                                        <div className="song-artist">
+                                            {track.artists?.map(a => a.name).join(', ') || 'Unknown Artist'}
+                                        </div>
+                                    </div>
+                                    <div className="song-album">{track.album?.name || 'Single'}</div>
+                                    <div className="song-duration">{formatDuration(track.duration_ms || 180000)}</div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div style={{ color: 'var(--text-secondary)', padding: '20px' }}>
+                            No tracks found. Try searching above or pick another playlist.
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* Library / Home view */
                 <div className="library-view-container">
                     <div 
                         className="library-card liked-songs-card"
@@ -239,7 +294,7 @@ const MainContent = () => {
                     {/* 20 Featured Music Playlists from YouTube/YouTube Music */}
                     <h2 className="library-section-title" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={20} color="#1ed760" />
-                        <span>20 Featured Playlists (YouTube Music)</span>
+                        <span>Featured Playlists (YouTube Music)</span>
                     </h2>
                     <div className="playlist-grid">
                         {youtubeFeatured.length > 0 ? (
@@ -263,52 +318,9 @@ const MainContent = () => {
                                 </div>
                             ))
                         ) : (
-                            <div style={{ color: 'var(--text-secondary)', padding: '12px' }}>Loading 20 featured music playlists...</div>
+                            <div style={{ color: 'var(--text-secondary)', padding: '12px' }}>Loading featured playlists...</div>
                         )}
                     </div>
-                </div>
-            ) : (
-                <div className="song-list">
-                    {loading ? (
-                        <div style={{ color: 'var(--text-secondary)', padding: '20px' }}>Loading tracks...</div>
-                    ) : errorMsg ? (
-                        <div style={{ color: '#f44336', padding: '20px' }}>{errorMsg}</div>
-                    ) : tracks.length > 0 ? (
-                        tracks.map((item, index) => {
-                            const track = item.track || item;
-                            const isCurrentTrack = currentTrack?.id === track.id;
-
-                            return (
-                                <div 
-                                    key={track.id || index} 
-                                    className={`song-row ${isCurrentTrack ? 'active-track' : ''}`}
-                                    onClick={() => {
-                                        addToRecent(track);
-                                        playQueue(tracks.map(t => t.track || t), index);
-                                    }}
-                                >
-                                    <div className="song-index">{index + 1}</div>
-                                    <img 
-                                        src={track.album?.images?.[0]?.url || 'https://via.placeholder.com/48'} 
-                                        alt={track.name} 
-                                        className="song-img"
-                                    />
-                                    <div className="song-details">
-                                        <div className="song-title">{track.name}</div>
-                                        <div className="song-artist">
-                                            {track.artists?.map(a => a.name).join(', ') || 'Unknown Artist'}
-                                        </div>
-                                    </div>
-                                    <div className="song-album">{track.album?.name || 'Single'}</div>
-                                    <div className="song-duration">{formatDuration(track.duration_ms || 180000)}</div>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <div style={{ color: 'var(--text-secondary)', padding: '20px' }}>
-                            No tracks found in this playlist. Search above or pick another playlist.
-                        </div>
-                    )}
                 </div>
             )}
         </div>

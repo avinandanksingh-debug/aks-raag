@@ -14,16 +14,26 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    // Safety fallback: Unblock loading state after 6 seconds if network/server is slow to respond
-    const timer = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 6000);
+    // Check if token exists in localStorage (Mobile & Web persistent login)
+    const token = localStorage.getItem('spotify_access_token');
+    if (token) {
+      setLoggedIn(true);
+      setLoading(false);
+      return;
+    }
 
-    // Check if user is logged in
-    axios.get(`${getApiBase()}/api/auth/me`, { withCredentials: true, timeout: 5000 })
+    // Fallback check against backend server
+    axios.get(`${getApiBase()}/api/auth/me`, { 
+      withCredentials: true, 
+      timeout: 5000,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
       .then(response => {
         if (mounted && response.data?.loggedIn) {
           setLoggedIn(true);
+          if (response.data.access_token) {
+            localStorage.setItem('spotify_access_token', response.data.access_token);
+          }
         }
       })
       .catch(error => {
@@ -31,20 +41,14 @@ function App() {
       })
       .finally(() => {
         if (mounted) setLoading(false);
-        clearTimeout(timer);
       });
-
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
-    };
   }, []);
 
   if (loading) {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', background: '#121212', gap: '16px' }}>
         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1ed760' }}>Aks Raag</div>
-        <div style={{ fontSize: '14px', color: '#b3b3b3' }}>Connecting to server...</div>
+        <div style={{ fontSize: '14px', color: '#b3b3b3' }}>Connecting...</div>
       </div>
     );
   }

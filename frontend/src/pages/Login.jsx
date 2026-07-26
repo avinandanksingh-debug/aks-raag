@@ -39,6 +39,7 @@ const Login = () => {
                         if (code && state) {
                             const res = await fetch(`${apiBase}/api/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
                             if (res.ok) {
+                                // Session polling will capture tokens, reload page
                                 window.location.reload();
                                 return;
                             }
@@ -72,6 +73,13 @@ const Login = () => {
                     const statusData = await check.json();
                     if (statusData.loggedIn) {
                         clearInterval(poll);
+                        // Save tokens locally so the app stays logged in permanently on mobile WebView
+                        if (statusData.access_token) {
+                            localStorage.setItem('spotify_access_token', statusData.access_token);
+                        }
+                        if (statusData.refresh_token) {
+                            localStorage.setItem('spotify_refresh_token', statusData.refresh_token);
+                        }
                         try { await Browser.close(); } catch (_) {}
                         window.location.reload();
                     }

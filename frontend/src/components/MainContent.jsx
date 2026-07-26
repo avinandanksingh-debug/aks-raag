@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { getApiBase } from '../config';
 import { SpotifyContext } from '../context/SpotifyContext';
+import { Music, Heart, Play, ListMusic } from 'lucide-react';
 
 const MainContent = () => {
     const { user, activeView, setActiveView, playQueue, playlists, currentContext, setCurrentContext, currentTrack } = useContext(SpotifyContext);
@@ -15,7 +16,6 @@ const MainContent = () => {
     
     // Cache state
     const [cachedSongs, setCachedSongs] = useState([]);
-    const [youtubeFeatured, setYoutubeFeatured] = useState([]);
 
     useEffect(() => {
         const fetchViewData = async () => {
@@ -46,15 +46,6 @@ const MainContent = () => {
                     const res = await axios.get(`${getApiBase()}/api/spotify/playlists/${activeView.id}/tracks`, { withCredentials: true });
                     setTracks(res.data.items || []);
                 } else if (activeView.type === 'library') {
-                    try {
-                        const ytRes = await axios.get(`${getApiBase()}/api/youtube/featured-playlists`, { withCredentials: true }).catch(() => null);
-                        if (ytRes && ytRes.data) {
-                            setYoutubeFeatured(ytRes.data.playlists || []);
-                        }
-                    } catch (e) {
-                        console.error('Failed to fetch featured playlists', e);
-                    }
-                    
                     const savedSearches = localStorage.getItem('aks_raag_recent_searches');
                     if (savedSearches) {
                         try {
@@ -151,7 +142,7 @@ const MainContent = () => {
 
     const getHeaderDetails = () => {
         if (activeView.type === 'liked') return { title: 'Liked Songs', subtitle: 'Your favorite tracks' };
-        if (activeView.type === 'library') return { title: 'Your Playlists', subtitle: 'Personal & Featured Playlists' };
+        if (activeView.type === 'library') return { title: 'Your Library', subtitle: 'Your Playlists & Saved Collection' };
         if (activeView.type === 'settings') return { title: 'Settings', subtitle: 'Manage Storage & Cache' };
         if (activeView.type === 'playlist') {
             const pl = playlists.find(p => p.id === activeView.id);
@@ -194,8 +185,46 @@ const MainContent = () => {
                     </div>
                 </div>
             ) : activeView.type === 'library' ? (
-                <div className="library-view-split">
-                    {/* Library View Content */}
+                <div className="library-view-container">
+                    <div 
+                        className="library-card liked-songs-card"
+                        onClick={() => setActiveView({ type: 'liked' })}
+                    >
+                        <div className="liked-card-icon">
+                            <Heart size={32} fill="#fff" color="#fff" />
+                        </div>
+                        <h3>Liked Songs</h3>
+                        <p>Quick access to all your favorite tracks</p>
+                    </div>
+
+                    <h2 className="library-section-title">Playlists</h2>
+                    <div className="playlist-grid">
+                        {playlists.length > 0 ? (
+                            playlists.map(pl => (
+                                <div 
+                                    key={pl.id} 
+                                    className="playlist-card"
+                                    onClick={() => setActiveView({ type: 'playlist', id: pl.id })}
+                                >
+                                    <div className="playlist-cover-wrap">
+                                        {pl.images?.[0]?.url ? (
+                                            <img src={pl.images[0].url} alt={pl.name} className="playlist-cover" />
+                                        ) : (
+                                            <div className="playlist-cover-placeholder">
+                                                <ListMusic size={32} color="#888" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h4 className="playlist-card-name">{pl.name}</h4>
+                                    <p className="playlist-card-tracks">{pl.tracks?.total || 0} Tracks</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="empty-playlists-msg">
+                                No playlists found in your Spotify account.
+                            </div>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div className="song-list">
@@ -219,7 +248,7 @@ const MainContent = () => {
                                 >
                                     <div className="song-index">{index + 1}</div>
                                     <img 
-                                        src={track.album?.images?.[0]?.url || 'https://via.placeholder.com/40'} 
+                                        src={track.album?.images?.[0]?.url || 'https://via.placeholder.com/48'} 
                                         alt={track.name} 
                                         className="song-img"
                                     />

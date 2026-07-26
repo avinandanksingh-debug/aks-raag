@@ -11,9 +11,11 @@ const stream = require('stream');
 const router = express.Router();
 
 // Set the ffmpeg path
-ffmpeg.setFfmpegPath(ffmpegStatic);
+if (ffmpegStatic) {
+    ffmpeg.setFfmpegPath(ffmpegStatic);
+}
 
-// Cache directory — lazily resolved so the env var is always set before first use
+// Cache directory
 let _cacheDir = null;
 function getCacheDir() {
     if (!_cacheDir) {
@@ -49,7 +51,7 @@ router.get('/cache', (req, res) => {
                 ...metadata,
                 sizeBytes: size
             };
-        }).filter(item => item.sizeBytes > 0); // only return if mp3 actually exists
+        }).filter(item => item.sizeBytes > 0);
         
         res.json({ items: cacheList });
     } catch (error) {
@@ -62,7 +64,6 @@ router.get('/cache', (req, res) => {
 router.delete('/cache/:id', (req, res) => {
     try {
         const hash = req.params.id;
-        // sanitize hash to prevent path traversal
         if (!/^[a-f0-9]+$/i.test(hash)) {
             return res.status(400).json({ error: 'Invalid ID format' });
         }
@@ -99,7 +100,7 @@ router.get('/play', async (req, res) => {
             const searchResults = await play.search(searchQuery, {
                 limit: 1,
                 source: { youtube: 'video' }
-            });
+            }).catch(() => []);
 
             if (!searchResults || searchResults.length === 0) {
                 return res.status(404).json({ error: 'Track not found on YouTube' });
@@ -125,72 +126,63 @@ router.get('/play', async (req, res) => {
             console.log(`[Cache Hit] Streaming local file for: ${videoUrl}`);
             
             if (isSeek) {
-                // If seeking a local file, run it through ffmpeg to slice it
                 let command = ffmpeg(mp3Path)
                     .setStartTime(parseFloat(start))
                     .format('mp3')
-                    .audioBitrate(320)
+                    .audioBitrate(192)
                     .on('error', (err) => {
                         console.error('FFmpeg local seek error:', err.message);
                     });
                 command.pipe(res, { end: true });
             } else {
-                // Instantly stream the local file
                 const readStream = fs.createReadStream(mp3Path);
                 readStream.pipe(res);
             }
             return;
         }
 
-        console.log(`[Cache Miss] Fetching from YouTube: ${videoUrl}`);
+        console.log(`[Cache Miss] Fetching from YouTube via play-dl: ${videoUrl}`);
 
-        // Use youtube-dl-exec (yt-dlp) for robust audio stream extraction
-        const ytDlpProcess = youtubedl.exec(videoUrl, {
-            output: '-',
-            format: 'bestaudio',
-            quiet: true
-        });
+        try {
+            const streamInfo = await play.stream(videoUrl);
+            let command = ffmpeg(streamInfo.stream)
+                .format('mp3')
+                .audioBitrate(192)
+                .on('error', (err) => {
+                    console.error('FFmpeg error:', err.message);
+                });
 
-        // Bump audio bitrate to 320 for highest quality
-        let command = ffmpeg(ytDlpProcess.stdout)
-            .format('mp3')
-            .audioBitrate(320)
-            .on('error', (err) => {
-                console.error('FFmpeg error:', err.message);
-                if (!res.headersSent) {
-                    res.status(500).json({ error: 'Failed to transcode audio' });
-                }
+            if (isSeek) {
+                command = command.setStartTime(parseFloat(start));
+                command.pipe(res, { end: true });
+            } else {
+                const pt = new stream.PassThrough();
+                command.pipe(pt);
+                pt.pipe(res, { end: true });
+
+                const fileStream = fs.createWriteStream(mp3Path);
+                pt.pipe(fileStream);
+
+                fs.writeFileSync(metaPath, JSON.stringify({
+                    track: trackName,
+                    artist: artistName,
+                    videoUrl: videoUrl,
+                    savedAt: new Date().toISOString()
+                }));
+
+                fileStream.on('error', () => {
+                    if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
+                });
+            }
+        } catch (streamErr) {
+            console.warn('play-dl stream failed, using youtube-dl-exec fallback:', streamErr.message);
+            const ytDlpProcess = youtubedl.exec(videoUrl, {
+                output: '-',
+                format: 'bestaudio',
+                quiet: true
             });
-
-        if (isSeek) {
-            // Apply start seek if provided - do NOT cache partial streams
-            command = command.setStartTime(parseFloat(start));
+            let command = ffmpeg(ytDlpProcess.stdout).format('mp3').audioBitrate(192);
             command.pipe(res, { end: true });
-        } else {
-            // Full stream - pipe to both Response and a local FileWriteStream
-            const pt = new stream.PassThrough();
-            
-            command.pipe(pt);
-            
-            // Pipe to user
-            pt.pipe(res, { end: true });
-            
-            // Pipe to disk
-            const fileStream = fs.createWriteStream(mp3Path);
-            pt.pipe(fileStream);
-            
-            // Save metadata
-            fs.writeFileSync(metaPath, JSON.stringify({
-                track: trackName,
-                artist: artistName,
-                videoUrl: videoUrl,
-                savedAt: new Date().toISOString()
-            }));
-            
-            // Clean up if there's an error during file write
-            fileStream.on('error', () => {
-                if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
-            });
         }
 
     } catch (error) {

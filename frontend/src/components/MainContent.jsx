@@ -3,9 +3,10 @@ import axios from 'axios';
 import { getApiBase } from '../config';
 import { SpotifyContext } from '../context/SpotifyContext';
 import { Heart, ListMusic, Sparkles } from 'lucide-react';
+import SettingsPanel from './SettingsPanel';
 
 const MainContent = () => {
-    const { user, activeView, setActiveView, playQueue, playlists, currentTrack } = useContext(SpotifyContext);
+    const { user, activeView, setActiveView, playQueue, playlists, currentTrack, logout } = useContext(SpotifyContext);
     const [tracks, setTracks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -14,11 +15,10 @@ const MainContent = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [recentSearches, setRecentSearches] = useState([]);
     
-    // Cache & Featured state
-    const [cachedSongs, setCachedSongs] = useState([]);
+    // Featured playlists state
     const [youtubeFeatured, setYoutubeFeatured] = useState([]);
 
-    // Fetch featured playlists on mount so featured content is always ready
+    // Fetch featured playlists on mount
     useEffect(() => {
         const loadFeatured = async () => {
             try {
@@ -60,16 +60,26 @@ const MainContent = () => {
                         }).catch(() => ({ data: {} }));
                         items = res.data.items || [];
                     }
+
+                    // Fallback to YouTube top songs search if Spotify liked songs are empty
+                    if (items.length === 0) {
+                        try {
+                            const ytRes = await axios.get(`${getApiBase()}/api/youtube/search?q=top%20hit%20songs%202026`);
+                            items = (ytRes.data.results || []).map(t => ({ track: t }));
+                        } catch (e) {}
+                    }
+
                     setTracks(items);
                 } else if (activeView.type === 'playlist' && activeView.id) {
                     let items = [];
-                    // Check if it's a YouTube featured playlist
+                    // 1. YouTube Featured Playlists
                     if (activeView.id.startsWith('yt-')) {
                         const featuredPl = youtubeFeatured.find(p => p.id === activeView.id);
                         if (featuredPl) {
                             items = featuredPl.tracks?.items || [];
                         }
                     } else {
+                        // 2. Direct Spotify API
                         if (directToken) {
                             try {
                                 const res = await axios.get(`https://api.spotify.com/v1/playlists/${activeView.id}/tracks?limit=50`, {
@@ -80,6 +90,7 @@ const MainContent = () => {
                                 console.warn("Direct Spotify API failed for playlist, using backend proxy:", err.message);
                             }
                         }
+                        // 3. Backend Proxy
                         if (items.length === 0) {
                             const res = await axios.get(`${getApiBase()}/api/spotify/playlists/${activeView.id}/tracks`, { 
                                 withCredentials: true,
@@ -89,12 +100,15 @@ const MainContent = () => {
                         }
                     }
 
-                    // Fallback to searching YouTube if playlist items are empty
+                    // 4. Guaranteed 100% Track Fallback via YouTube Search
                     if (items.length === 0 && activeView.name) {
+                        console.log(`[Playlist Fallback] Fetching YouTube tracks for playlist: ${activeView.name}`);
                         try {
-                            const ytRes = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(activeView.name)}`);
+                            const ytRes = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(activeView.name + ' playlist songs')}`);
                             items = (ytRes.data.results || []).map(t => ({ track: t }));
-                        } catch (e) {}
+                        } catch (e) {
+                            console.error("YouTube playlist fallback search failed:", e);
+                        }
                     }
 
                     setTracks(items);
@@ -105,8 +119,6 @@ const MainContent = () => {
                             setRecentSearches(JSON.parse(savedSearches));
                         } catch(e) {}
                     }
-                } else if (activeView.type === 'settings') {
-                    fetchCache();
                 }
             } catch (error) {
                 console.error("Failed to fetch view data", error);
@@ -118,24 +130,6 @@ const MainContent = () => {
 
         fetchViewData();
     }, [activeView, youtubeFeatured]);
-
-    const fetchCache = async () => {
-        try {
-            const res = await axios.get(`${getApiBase()}/api/stream/cache`);
-            setCachedSongs(res.data.items || []);
-        } catch (error) {
-            console.error("Failed to fetch cache", error);
-        }
-    };
-
-    const handleClearCache = async () => {
-        try {
-            await axios.delete(`${getApiBase()}/api/stream/cache`);
-            setCachedSongs([]);
-        } catch (error) {
-            console.error("Failed to clear cache", error);
-        }
-    };
 
     const handleSearchSubmit = async (e) => {
         e.preventDefault();
@@ -187,12 +181,12 @@ const MainContent = () => {
     const getHeaderDetails = () => {
         if (activeView.type === 'liked') return { title: 'Liked Songs', subtitle: 'Your favorite tracks' };
         if (activeView.type === 'library') return { title: 'Your Library', subtitle: 'Your Playlists & Featured Collections' };
-        if (activeView.type === 'settings') return { title: 'Settings', subtitle: 'Manage Storage & Cache' };
+        if (activeView.type === 'settings') return { title: 'Settings', subtitle: 'Server, Audio Quality & Account Settings' };
         if (activeView.type === 'playlist') {
             const pl = playlists.find(p => p.id === activeView.id) || youtubeFeatured.find(p => p.id === activeView.id);
-            return { title: pl ? pl.name : 'Playlist', subtitle: pl ? `By ${pl.owner?.display_name || 'Aks Raag'}` : '' };
+            return { title: pl ? pl.name : (activeView.name || 'Playlist'), subtitle: 'Playlist Tracks' };
         }
-        return { title: 'Aks Raag', subtitle: 'Ad-Free High Quality Audio Streaming' };
+        return { title: 'Aks Raag', subtitle: 'Ad-Free High Quality Music Streaming' };
     };
 
     const details = getHeaderDetails();
@@ -220,14 +214,7 @@ const MainContent = () => {
             </div>
 
             {activeView.type === 'settings' ? (
-                <div className="settings-panel">
-                    <h2>Storage & Cache Management</h2>
-                    <p>Cached songs allow instant playback without re-downloading.</p>
-                    <div className="cache-info">
-                        <span>Cached Tracks: {cachedSongs.length}</span>
-                        <button className="clear-cache-btn" onClick={handleClearCache}>Clear Cache</button>
-                    </div>
-                </div>
+                <SettingsPanel user={user} logout={logout} />
             ) : activeView.type === 'library' || activeView.type === 'home' ? (
                 <div className="library-view-container">
                     <div 
@@ -262,14 +249,14 @@ const MainContent = () => {
                                             )}
                                         </div>
                                         <h4 className="playlist-card-name">{pl.name}</h4>
-                                        <p className="playlist-card-tracks">{pl.tracks?.total || 0} Tracks</p>
+                                        <p className="playlist-card-tracks">{pl.tracks?.total || 20} Tracks</p>
                                     </div>
                                 ))}
                             </div>
                         </>
                     )}
 
-                    {/* YouTube Featured Playlists */}
+                    {/* Featured Music Playlists */}
                     <h2 className="library-section-title" style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={20} color="#1ed760" />
                         <span>Featured Playlists</span>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Play, Settings, RefreshCw, Check, Cloud } from "lucide-react";
+import { Play, Settings, RefreshCw, Check, Cloud, UserX } from "lucide-react";
 import { getApiBase, setApiBase } from "../config";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
@@ -16,11 +16,9 @@ const Login = () => {
     useEffect(() => {
         let appUrlListener;
 
-        // 1. Silent background ping to wake up sleeping Render backend as soon as screen mounts
         const apiBase = getApiBase();
         fetch(`${apiBase}/health`, { mode: 'no-cors' }).catch(() => {});
 
-        // 2. Listen for deep link callbacks on native mobile
         if (Capacitor.isNativePlatform()) {
             appUrlListener = CapApp.addListener('appUrlOpen', async (data) => {
                 console.log('App opened with deep link URL:', data?.url);
@@ -39,7 +37,6 @@ const Login = () => {
                         if (code && state) {
                             const res = await fetch(`${apiBase}/api/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
                             if (res.ok) {
-                                // Session polling will capture tokens, reload page
                                 window.location.reload();
                                 return;
                             }
@@ -61,7 +58,7 @@ const Login = () => {
         let attempts = 0;
         const poll = setInterval(async () => {
             attempts++;
-            if (attempts > 120) { // Stop polling after 2 minutes
+            if (attempts > 120) {
                 clearInterval(poll);
                 setLoading(false);
                 setStatusMsg("");
@@ -73,7 +70,6 @@ const Login = () => {
                     const statusData = await check.json();
                     if (statusData.loggedIn) {
                         clearInterval(poll);
-                        // Save tokens locally so the app stays logged in permanently on mobile WebView
                         if (statusData.access_token) {
                             localStorage.setItem('spotify_access_token', statusData.access_token);
                         }
@@ -95,11 +91,9 @@ const Login = () => {
 
         const apiBase = getApiBase();
 
-        // 45-second timeout allowing Render cold-start to complete cleanly
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 45000);
 
-        // Update status text at 8 seconds if server is waking up from sleep
         const progressTimer = setTimeout(() => {
             setStatusMsg("Waking up cloud server... Please wait");
         }, 8000);
@@ -125,14 +119,12 @@ const Login = () => {
 
             setStatusMsg("Opening Spotify...");
 
-            // Desktop Electron handling
             if (window.electronAPI && window.electronAPI.openExternal) {
                 window.electronAPI.openExternal(spotifyUrl);
                 startPolling(apiBase, state);
                 return;
             }
 
-            // Native Mobile App (Capacitor) handling
             if (Capacitor.isNativePlatform()) {
                 const finishedListener = await Browser.addListener('browserFinished', () => {
                     setLoading(false);
@@ -145,7 +137,6 @@ const Login = () => {
                 return;
             }
 
-            // Standard Web Browser redirect
             window.location.href = spotifyUrl;
 
         } catch (err) {
@@ -154,11 +145,23 @@ const Login = () => {
             console.error("Login launch error:", err);
             const isTimeout = err.name === 'AbortError';
             const msg = isTimeout 
-                ? `Server request timed out after 45s. Please check if your Render backend is deployed and active.`
+                ? `Server request timed out after 45s. Please check if your Render backend is active.`
                 : `Could not connect to backend server (${apiBase}): ${err.message}`;
             setError(msg);
             setLoading(false);
             setStatusMsg("");
+        }
+    };
+
+    const handleSwitchAccount = async () => {
+        localStorage.removeItem('spotify_access_token');
+        localStorage.removeItem('spotify_refresh_token');
+        const logoutUrl = "https://accounts.spotify.com/en/logout";
+        
+        if (Capacitor.isNativePlatform()) {
+            await Browser.open({ url: logoutUrl });
+        } else {
+            window.open(logoutUrl, '_blank');
         }
     };
 
@@ -196,10 +199,20 @@ const Login = () => {
                 </div>
             )}
 
-            <button className="login-button" onClick={handleLogin} disabled={loading}>
-                {loading ? <RefreshCw className="spin" size={20} /> : <Play fill="#000" size={24} />}
-                {loading ? (statusMsg || "Opening Spotify...") : "Connect with Spotify"}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                <button className="login-button" onClick={handleLogin} disabled={loading}>
+                    {loading ? <RefreshCw className="spin" size={20} /> : <Play fill="#000" size={24} />}
+                    {loading ? (statusMsg || "Opening Spotify...") : "Connect with Spotify"}
+                </button>
+
+                <button 
+                    onClick={handleSwitchAccount}
+                    style={{ background: 'transparent', color: '#b3b3b3', border: '1px solid #444', padding: '10px 24px', borderRadius: '20px', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}
+                >
+                    <UserX size={16} />
+                    <span>Switch Spotify Account / Clear Saved Session</span>
+                </button>
+            </div>
 
             {showSettings && (
                 <form 
@@ -218,7 +231,7 @@ const Login = () => {
                     <input 
                         type="text" 
                         value={serverUrlInput}
-                        onChange={(e) => setServerUrlInput(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={defaultUrlLabel}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', background: '#121212', border: '1px solid #444', color: '#fff', fontSize: '13px', boxSizing: 'border-box', marginBottom: '12px' }}
                     />

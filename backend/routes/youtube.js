@@ -1,5 +1,5 @@
 const express = require('express');
-const play = require('play-dl');
+const yts = require('yt-search');
 const router = express.Router();
 
 router.get('/search', async (req, res) => {
@@ -11,27 +11,24 @@ router.get('/search', async (req, res) => {
 
         console.log(`[YouTube API Proxy] Searching for: ${query}`);
         
-        const searchResults = await play.search(query, {
-            limit: 20,
-            source: { youtube: 'video' }
-        });
+        const searchResults = await yts(query);
+        const videos = searchResults.videos ? searchResults.videos.slice(0, 20) : [];
 
-        // Map YouTube video results to mimic the structure of a Spotify track
-        // This ensures the frontend player and track list render seamlessly
-        const mappedTracks = searchResults.map(video => {
+        const mappedTracks = videos.map(video => {
             return {
-                id: video.id,
+                id: video.videoId,
                 name: video.title,
                 youtube_url: video.url,
-                duration_ms: (video.durationInSec || 0) * 1000,
-                artists: [{ name: video.channel?.name || 'YouTube' }],
+                duration_ms: (video.seconds || 0) * 1000,
+                artists: [{ name: video.author?.name || 'YouTube' }],
                 album: {
-                    images: [{ url: video.thumbnails?.[0]?.url || '' }]
+                    name: 'YouTube Search',
+                    images: [{ url: video.thumbnail || '' }]
                 }
             };
         });
 
-        res.json({ items: mappedTracks });
+        res.json({ results: mappedTracks });
     } catch (error) {
         console.error('Error fetching YouTube search results:', error);
         res.status(500).json({ error: 'Failed to search YouTube' });
@@ -57,54 +54,34 @@ router.get('/featured-playlists', async (req, res) => {
             { id: 'yt-7', name: 'Rap Caviar', query: 'Rap Caviar top hits' },
             { id: 'yt-8', name: 'Acoustic Covers', query: 'Best acoustic covers' },
             { id: 'yt-9', name: 'Workout Motivation', query: 'Workout music mix' },
-            { id: 'yt-10', name: 'K-Pop Hits', query: 'K-Pop top songs 2026' },
-            { id: 'yt-11', name: 'Latin Hits', query: 'Latin hits top Reggaeton' },
-            { id: 'yt-12', name: 'Indie Pop', query: 'Indie pop top hits' },
-            { id: 'yt-13', name: 'Classical Essentials', query: 'Classical music essentials' },
-            { id: 'yt-14', name: 'R&B Classics', query: 'Best R&B classics' },
-            { id: 'yt-15', name: 'Bollywood Romantic', query: 'Bollywood romantic hits' },
-            { id: 'yt-16', name: 'Gaming Music', query: 'Gaming music EDM dubstep' },
-            { id: 'yt-17', name: 'Focus Music', query: 'Deep focus study music' },
-            { id: 'yt-18', name: 'Country Hits', query: 'Country top hits 2026' },
-            { id: 'yt-19', name: 'Best of 2000s', query: '2000s throwback hits' },
-            { id: 'yt-20', name: 'Viral TikTok', query: 'Viral TikTok songs' }
+            { id: 'yt-10', name: 'K-Pop Hits', query: 'K-Pop top songs 2026' }
         ];
 
         const playlists = [];
-        // Fetch in batches of 5 to avoid YouTube rate limits
-        for (let i = 0; i < queries.length; i += 5) {
-            const batch = queries.slice(i, i + 5);
-            const batchResults = await Promise.all(batch.map(async (q) => {
-                try {
-                    const results = await play.search(q.query, { limit: 10, source: { youtube: 'video' } });
-                    if (!results || results.length === 0) return null;
-
-                    const tracks = results.map(video => ({
-                        id: video.id,
-                        name: video.title,
-                        youtube_url: video.url,
-                        duration_ms: (video.durationInSec || 0) * 1000,
-                        artists: [{ name: video.channel?.name || 'YouTube' }],
-                        album: { images: [{ url: video.thumbnails?.[0]?.url || '' }] }
+        for (const q of queries) {
+            try {
+                const results = await yts(q.query);
+                const videos = results.videos ? results.videos.slice(0, 10) : [];
+                if (videos.length > 0) {
+                    const tracks = videos.map(v => ({
+                        id: v.videoId,
+                        name: v.title,
+                        youtube_url: v.url,
+                        duration_ms: (v.seconds || 0) * 1000,
+                        artists: [{ name: v.author?.name || 'YouTube' }],
+                        album: { images: [{ url: v.thumbnail || '' }] }
                     }));
                     
-                    return {
+                    playlists.push({
                         id: q.id,
                         name: q.name,
-                        description: 'Featured by YouTube Algorithm',
+                        description: 'Featured Music Collection',
                         images: [{ url: tracks[0]?.album.images[0].url || '' }],
                         tracks: { items: tracks.map(t => ({ track: t })) }
-                    };
-                } catch (e) {
-                    console.error(`Error fetching playlist ${q.name}:`, e.message);
-                    return null;
+                    });
                 }
-            }));
-            playlists.push(...batchResults.filter(Boolean));
-            
-            // Wait 500ms between batches to prevent 429 Too Many Requests
-            if (i + 5 < queries.length) {
-                await new Promise(r => setTimeout(r, 500));
+            } catch (e) {
+                console.error(`Error fetching playlist ${q.name}:`, e.message);
             }
         }
 
@@ -122,15 +99,16 @@ router.get('/recommend', async (req, res) => {
         const { seed_artist } = req.query;
         if (!seed_artist) return res.status(400).json({ error: 'Missing seed_artist' });
 
-        const searchResults = await play.search(`${seed_artist} mix`, { limit: 10, source: { youtube: 'video' } });
-        
-        const tracks = searchResults.map(video => ({
-            id: video.id,
-            name: video.title,
-            youtube_url: video.url,
-            duration_ms: (video.durationInSec || 0) * 1000,
-            artists: [{ name: video.channel?.name || 'YouTube' }],
-            album: { images: [{ url: video.thumbnails?.[0]?.url || '' }] }
+        const searchResults = await yts(`${seed_artist} mix`);
+        const videos = searchResults.videos ? searchResults.videos.slice(0, 10) : [];
+
+        const tracks = videos.map(v => ({
+            id: v.videoId,
+            name: v.title,
+            youtube_url: v.url,
+            duration_ms: (v.seconds || 0) * 1000,
+            artists: [{ name: v.author?.name || 'YouTube' }],
+            album: { images: [{ url: v.thumbnail || '' }] }
         }));
 
         res.json({ tracks });

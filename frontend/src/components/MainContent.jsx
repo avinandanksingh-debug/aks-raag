@@ -2,10 +2,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { getApiBase } from '../config';
 import { SpotifyContext } from '../context/SpotifyContext';
-import { Music, Heart, Play, ListMusic } from 'lucide-react';
+import { Heart, ListMusic, Sparkles } from 'lucide-react';
 
 const MainContent = () => {
-    const { user, activeView, setActiveView, playQueue, playlists, currentContext, setCurrentContext, currentTrack } = useContext(SpotifyContext);
+    const { user, activeView, setActiveView, playQueue, playlists, currentTrack } = useContext(SpotifyContext);
     const [tracks, setTracks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -16,6 +16,7 @@ const MainContent = () => {
     
     // Cache state
     const [cachedSongs, setCachedSongs] = useState([]);
+    const [youtubeFeatured, setYoutubeFeatured] = useState([]);
 
     useEffect(() => {
         const fetchViewData = async () => {
@@ -26,33 +27,69 @@ const MainContent = () => {
 
             try {
                 if (activeView.type === 'liked') {
+                    let items = [];
                     if (directToken) {
-                        const res = await axios.get('https://api.spotify.com/v1/me/tracks?limit=50', {
-                            headers: { Authorization: `Bearer ${directToken}` }
-                        });
-                        setTracks(res.data.items || []);
-                        return;
+                        try {
+                            const res = await axios.get('https://api.spotify.com/v1/me/tracks?limit=50', {
+                                headers: { Authorization: `Bearer ${directToken}` }
+                            });
+                            items = res.data.items || [];
+                        } catch (err) {
+                            console.warn("Direct Spotify API failed for liked songs, using backend fallback:", err.message);
+                        }
                     }
-                    const res = await axios.get(`${getApiBase()}/api/spotify/tracks`, { withCredentials: true });
-                    setTracks(res.data.items || []);
+                    if (items.length === 0) {
+                        const res = await axios.get(`${getApiBase()}/api/spotify/tracks`, { 
+                            withCredentials: true,
+                            headers: directToken ? { Authorization: `Bearer ${directToken}` } : {}
+                        }).catch(() => ({ data: {} }));
+                        items = res.data.items || [];
+                    }
+                    setTracks(items);
                 } else if (activeView.type === 'playlist' && activeView.id) {
-                    if (directToken) {
-                        const res = await axios.get(`https://api.spotify.com/v1/playlists/${activeView.id}/tracks?limit=50`, {
-                            headers: { Authorization: `Bearer ${directToken}` }
-                        });
-                        setTracks(res.data.items || []);
-                        return;
+                    let items = [];
+                    // Check if it's a YouTube featured playlist
+                    if (activeView.id.startsWith('yt-')) {
+                        const featuredPl = youtubeFeatured.find(p => p.id === activeView.id);
+                        if (featuredPl) {
+                            items = featuredPl.tracks?.items || [];
+                        }
+                    } else {
+                        if (directToken) {
+                            try {
+                                const res = await axios.get(`https://api.spotify.com/v1/playlists/${activeView.id}/tracks?limit=50`, {
+                                    headers: { Authorization: `Bearer ${directToken}` }
+                                });
+                                items = res.data.items || [];
+                            } catch (err) {
+                                console.warn("Direct Spotify API failed for playlist, using backend proxy:", err.message);
+                            }
+                        }
+                        if (items.length === 0) {
+                            const res = await axios.get(`${getApiBase()}/api/spotify/playlists/${activeView.id}/tracks`, { 
+                                withCredentials: true,
+                                headers: directToken ? { Authorization: `Bearer ${directToken}` } : {}
+                            }).catch(() => ({ data: {} }));
+                            items = res.data.items || [];
+                        }
                     }
-                    const res = await axios.get(`${getApiBase()}/api/spotify/playlists/${activeView.id}/tracks`, { withCredentials: true });
-                    setTracks(res.data.items || []);
+                    setTracks(items);
                 } else if (activeView.type === 'library') {
+                    // Fetch YouTube Featured Playlists to ensure library is never empty
+                    try {
+                        const ytRes = await axios.get(`${getApiBase()}/api/youtube/featured-playlists`).catch(() => null);
+                        if (ytRes && ytRes.data?.playlists) {
+                            setYoutubeFeatured(ytRes.data.playlists);
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch featured playlists', e);
+                    }
+
                     const savedSearches = localStorage.getItem('aks_raag_recent_searches');
                     if (savedSearches) {
                         try {
                             setRecentSearches(JSON.parse(savedSearches));
-                        } catch(e) {
-                            console.error('Failed to parse recent searches', e);
-                        }
+                        } catch(e) {}
                     }
                 } else if (activeView.type === 'settings') {
                     fetchCache();
@@ -70,8 +107,8 @@ const MainContent = () => {
 
     const fetchCache = async () => {
         try {
-            const res = await axios.get(`${getApiBase()}/api/stream/cache`, { withCredentials: true });
-            setCachedSongs(res.data.cache || []);
+            const res = await axios.get(`${getApiBase()}/api/stream/cache`);
+            setCachedSongs(res.data.items || []);
         } catch (error) {
             console.error("Failed to fetch cache", error);
         }
@@ -79,7 +116,7 @@ const MainContent = () => {
 
     const handleClearCache = async () => {
         try {
-            await axios.delete(`${getApiBase()}/api/stream/cache`, { withCredentials: true });
+            await axios.delete(`${getApiBase()}/api/stream/cache`);
             setCachedSongs([]);
         } catch (error) {
             console.error("Failed to clear cache", error);
@@ -95,28 +132,21 @@ const MainContent = () => {
 
         try {
             if (directToken) {
-                const res = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`, {
-                    headers: { Authorization: `Bearer ${directToken}` }
-                });
-                const searchResults = (res.data.tracks?.items || []).map(track => ({ track }));
-                setTracks(searchResults);
-                return;
+                try {
+                    const res = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`, {
+                        headers: { Authorization: `Bearer ${directToken}` }
+                    });
+                    const searchResults = (res.data.tracks?.items || []).map(track => ({ track }));
+                    setTracks(searchResults);
+                    return;
+                } catch (err) {
+                    console.warn("Direct Spotify search failed, using YouTube search fallback:", err.message);
+                }
             }
 
-            const res = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(searchQuery)}`, { withCredentials: true });
+            const res = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(searchQuery)}`);
             const ytTracks = (res.data.results || []).map(item => ({
-                track: {
-                    id: item.videoId,
-                    name: item.title,
-                    artists: [{ name: item.channelTitle || 'YouTube' }],
-                    album: {
-                        name: 'YouTube Search',
-                        images: [{ url: item.thumbnail }]
-                    },
-                    duration_ms: item.durationMs || 180000,
-                    isYouTube: true,
-                    videoId: item.videoId
-                }
+                track: item
             }));
             setTracks(ytTracks);
         } catch (error) {
@@ -134,7 +164,7 @@ const MainContent = () => {
     };
 
     const formatDuration = (ms) => {
-        const totalSeconds = Math.floor(ms / 1000);
+        const totalSeconds = Math.floor((ms || 180000) / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
@@ -142,11 +172,11 @@ const MainContent = () => {
 
     const getHeaderDetails = () => {
         if (activeView.type === 'liked') return { title: 'Liked Songs', subtitle: 'Your favorite tracks' };
-        if (activeView.type === 'library') return { title: 'Your Library', subtitle: 'Your Playlists & Saved Collection' };
+        if (activeView.type === 'library') return { title: 'Your Library', subtitle: 'Your Playlists & Featured Collections' };
         if (activeView.type === 'settings') return { title: 'Settings', subtitle: 'Manage Storage & Cache' };
         if (activeView.type === 'playlist') {
-            const pl = playlists.find(p => p.id === activeView.id);
-            return { title: pl ? pl.name : 'Playlist', subtitle: pl ? `By ${pl.owner?.display_name || 'Spotify'}` : '' };
+            const pl = playlists.find(p => p.id === activeView.id) || youtubeFeatured.find(p => p.id === activeView.id);
+            return { title: pl ? pl.name : 'Playlist', subtitle: pl ? `By ${pl.owner?.display_name || 'Aks Raag'}` : '' };
         }
         return { title: 'Aks Raag', subtitle: '' };
     };
@@ -197,7 +227,8 @@ const MainContent = () => {
                         <p>Quick access to all your favorite tracks</p>
                     </div>
 
-                    <h2 className="library-section-title">Playlists</h2>
+                    {/* Spotify User Playlists */}
+                    <h2 className="library-section-title">Your Spotify Playlists</h2>
                     <div className="playlist-grid">
                         {playlists.length > 0 ? (
                             playlists.map(pl => (
@@ -221,10 +252,41 @@ const MainContent = () => {
                             ))
                         ) : (
                             <div className="empty-playlists-msg">
-                                No playlists found in your Spotify account.
+                                Connect Spotify or add playlists to see them here.
                             </div>
                         )}
                     </div>
+
+                    {/* YouTube Featured Playlists */}
+                    {youtubeFeatured.length > 0 && (
+                        <>
+                            <h2 className="library-section-title" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Sparkles size={20} color="#1ed760" />
+                                <span>Featured Music Playlists</span>
+                            </h2>
+                            <div className="playlist-grid">
+                                {youtubeFeatured.map(pl => (
+                                    <div 
+                                        key={pl.id} 
+                                        className="playlist-card"
+                                        onClick={() => setActiveView({ type: 'playlist', id: pl.id })}
+                                    >
+                                        <div className="playlist-cover-wrap">
+                                            {pl.images?.[0]?.url ? (
+                                                <img src={pl.images[0].url} alt={pl.name} className="playlist-cover" />
+                                            ) : (
+                                                <div className="playlist-cover-placeholder">
+                                                    <ListMusic size={32} color="#888" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <h4 className="playlist-card-name">{pl.name}</h4>
+                                        <p className="playlist-card-tracks">Top Curated Tracks</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             ) : (
                 <div className="song-list">
@@ -265,7 +327,7 @@ const MainContent = () => {
                         })
                     ) : (
                         <div style={{ color: 'var(--text-secondary)', padding: '20px' }}>
-                            No tracks to display. Search above or select a playlist.
+                            No tracks found in this playlist. Search above or pick another playlist.
                         </div>
                     )}
                 </div>

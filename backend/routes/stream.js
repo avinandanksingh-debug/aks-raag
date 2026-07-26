@@ -1,6 +1,6 @@
 const express = require('express');
-const play = require('play-dl');
-const youtubedl = require('youtube-dl-exec');
+const yts = require('yt-search');
+const ytdl = require('@distube/ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const fs = require('fs');
@@ -97,23 +97,19 @@ router.get('/play', async (req, res) => {
             const searchQuery = `${track} ${artist} official audio`;
             console.log(`Searching YouTube for: ${searchQuery}`);
             
-            const searchResults = await play.search(searchQuery, {
-                limit: 1,
-                source: { youtube: 'video' }
-            }).catch(() => []);
+            const searchResults = await yts(searchQuery).catch(() => null);
+            const videos = searchResults ? searchResults.videos : [];
 
-            if (!searchResults || searchResults.length === 0) {
+            if (!videos || videos.length === 0) {
                 return res.status(404).json({ error: 'Track not found on YouTube' });
             }
 
-            const videoInfo = searchResults[0];
+            const videoInfo = videos[0];
             console.log(`Found video: ${videoInfo.title} (${videoInfo.url})`);
             videoUrl = videoInfo.url;
         }
 
         const isSeek = start && !isNaN(parseFloat(start)) && parseFloat(start) > 0;
-        
-        // Generate a unique ID based on the URL
         const hash = crypto.createHash('md5').update(videoUrl).digest('hex');
         const mp3Path = path.join(getCacheDir(), `${hash}.mp3`);
         const metaPath = path.join(getCacheDir(), `${hash}.json`);
@@ -124,15 +120,12 @@ router.get('/play', async (req, res) => {
         // Check if the file is already cached locally
         if (fs.existsSync(mp3Path)) {
             console.log(`[Cache Hit] Streaming local file for: ${videoUrl}`);
-            
             if (isSeek) {
                 let command = ffmpeg(mp3Path)
                     .setStartTime(parseFloat(start))
                     .format('mp3')
                     .audioBitrate(192)
-                    .on('error', (err) => {
-                        console.error('FFmpeg local seek error:', err.message);
-                    });
+                    .on('error', (err) => console.error('FFmpeg local seek error:', err.message));
                 command.pipe(res, { end: true });
             } else {
                 const readStream = fs.createReadStream(mp3Path);
@@ -141,11 +134,16 @@ router.get('/play', async (req, res) => {
             return;
         }
 
-        console.log(`[Cache Miss] Fetching from YouTube via play-dl: ${videoUrl}`);
+        console.log(`[Cache Miss] Streaming via ytdl-core: ${videoUrl}`);
 
         try {
-            const streamInfo = await play.stream(videoUrl);
-            let command = ffmpeg(streamInfo.stream)
+            const audioStream = ytdl(videoUrl, { 
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25 
+            });
+
+            let command = ffmpeg(audioStream)
                 .format('mp3')
                 .audioBitrate(192)
                 .on('error', (err) => {
@@ -175,14 +173,10 @@ router.get('/play', async (req, res) => {
                 });
             }
         } catch (streamErr) {
-            console.warn('play-dl stream failed, using youtube-dl-exec fallback:', streamErr.message);
-            const ytDlpProcess = youtubedl.exec(videoUrl, {
-                output: '-',
-                format: 'bestaudio',
-                quiet: true
-            });
-            let command = ffmpeg(ytDlpProcess.stdout).format('mp3').audioBitrate(192);
-            command.pipe(res, { end: true });
+            console.error('ytdl-core audio extraction error:', streamErr.message);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to extract audio stream' });
+            }
         }
 
     } catch (error) {

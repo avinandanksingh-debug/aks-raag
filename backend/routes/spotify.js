@@ -10,11 +10,15 @@ router.use((req, res, next) => {
     next();
 });
 
-// Middleware to extract access token from cookies
+// Middleware to extract access token from cookies OR Authorization header
 const requireAuth = (req, res, next) => {
-    const token = req.cookies.spotify_access_token;
+    let token = req.cookies ? req.cookies.spotify_access_token : null;
+    if (!token && req.headers.authorization) {
+        const parts = req.headers.authorization.split(' ');
+        if (parts.length === 2 && parts[0] === 'Bearer') token = parts[1];
+    }
     if (!token) {
-        console.error(`[Spotify API Proxy] Unauthorized request to ${req.url} (No token cookie)`);
+        console.error(`[Spotify API Proxy] Unauthorized request to ${req.url} (No token header/cookie)`);
         return res.status(401).json({ error: 'Unauthorized: No access token' });
     }
     req.token = token;
@@ -37,7 +41,7 @@ router.get('/me', async (req, res) => {
 
 router.get('/playlists', async (req, res) => {
     try {
-        const response = await axios.get(`${SPOTIFY_API_BASE}/me/playlists`, {
+        const response = await axios.get(`${SPOTIFY_API_BASE}/me/playlists?limit=50`, {
             headers: { 'Authorization': `Bearer ${req.token}` }
         });
         res.json(response.data);
@@ -49,7 +53,7 @@ router.get('/playlists', async (req, res) => {
 
 router.get('/tracks', async (req, res) => {
     try {
-        const response = await axios.get(`${SPOTIFY_API_BASE}/me/tracks`, {
+        const response = await axios.get(`${SPOTIFY_API_BASE}/me/tracks?limit=50`, {
             headers: { 'Authorization': `Bearer ${req.token}` }
         });
         res.json(response.data);
@@ -61,11 +65,12 @@ router.get('/tracks', async (req, res) => {
 
 router.get('/playlists/:playlist_id/tracks', async (req, res) => {
     try {
-        const response = await axios.get(`${SPOTIFY_API_BASE}/playlists/${req.params.playlist_id}/items`, {
+        const response = await axios.get(`${SPOTIFY_API_BASE}/playlists/${req.params.playlist_id}/tracks?limit=50`, {
             headers: { 'Authorization': `Bearer ${req.token}` }
         });
         res.json(response.data);
     } catch (error) {
+        console.error('Error fetching playlist tracks:', error.response?.data || error.message);
         res.status(error.response?.status || 500).json(error.response?.data || { error: 'Failed to fetch playlist tracks' });
     }
 });
@@ -75,8 +80,7 @@ router.get('/search', async (req, res) => {
         const query = req.query.q;
         if (!query) return res.status(400).json({ error: 'Missing query parameter q' });
         
-        // Spotify Feb 2026 API update restricts limit to max 10
-        const response = await axios.get(`${SPOTIFY_API_BASE}/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
+        const response = await axios.get(`${SPOTIFY_API_BASE}/search?q=${encodeURIComponent(query)}&type=track&limit=20`, {
             headers: { 'Authorization': `Bearer ${req.token}` }
         });
         res.json(response.data);

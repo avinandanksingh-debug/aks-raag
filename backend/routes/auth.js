@@ -5,8 +5,8 @@ const querystring = require('querystring');
 
 const router = express.Router();
 
-const CLIENT_ID     = process.env.SPOTIFY_CLIENT_ID;
-const CLIENT_SECRET  = process.env.SPOTIFY_CLIENT_SECRET;
+const CLIENT_ID     = process.env.SPOTIFY_CLIENT_ID || 'afe50167e9a44d7fb99dfe22a75cbe4a';
+const CLIENT_SECRET  = process.env.SPOTIFY_CLIENT_SECRET || 'baaff70d77284be5a44002397e56c447';
 
 const SCOPE = 'user-read-private user-read-email user-library-read playlist-read-private playlist-read-collaborative';
 

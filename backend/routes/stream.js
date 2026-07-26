@@ -80,6 +80,11 @@ router.delete('/cache/:id', (req, res) => {
 });
 
 router.get('/play', async (req, res) => {
+    // Set CORS headers on all stream responses for native Android WebView HTML5 Audio compatibility
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Authorization');
+
     const { track, artist, start, url } = req.query;
 
     if (!url && (!track || !artist)) {
@@ -102,14 +107,11 @@ router.get('/play', async (req, res) => {
                 return res.status(404).json({ error: 'Track not found on YouTube' });
             }
 
-            const videoInfo = videos[0];
-            console.log(`Found video: ${videoInfo.title} (${videoInfo.url})`);
-            videoUrl = videoInfo.url;
+            videoUrl = videos[0].url;
         }
 
         const hash = crypto.createHash('md5').update(videoUrl).digest('hex');
         const mp3Path = path.join(getCacheDir(), `${hash}.mp3`);
-        const metaPath = path.join(getCacheDir(), `${hash}.json`);
 
         // Check if cached MP3 exists
         if (fs.existsSync(mp3Path)) {
@@ -143,48 +145,31 @@ router.get('/play', async (req, res) => {
             return;
         }
 
-        console.log(`[Cache Miss] Streaming via ytdl-core: ${videoUrl}`);
+        console.log(`[Cache Miss] Resolving direct audio stream URL: ${videoUrl}`);
 
+        try {
+            const info = await ytdl.getInfo(videoUrl);
+            const format = ytdl.chooseFormat(info.formats, { filter: 'audioonly', quality: 'highestaudio' });
+
+            if (format && format.url) {
+                console.log(`[Stream Redirect] Serving direct audio stream for: ${videoUrl}`);
+                return res.redirect(302, format.url);
+            }
+        } catch (infoErr) {
+            console.warn("[ytdl-core getInfo warning]:", infoErr.message);
+        }
+
+        // Fallback: pipe directly via ytdl-core stream
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Accept-Ranges', 'bytes');
 
-        try {
-            const audioStream = ytdl(videoUrl, { 
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25 
-            });
+        const audioStream = ytdl(videoUrl, { 
+            filter: 'audioonly',
+            quality: 'highestaudio',
+            highWaterMark: 1 << 25 
+        });
 
-            let command = ffmpeg(audioStream)
-                .format('mp3')
-                .audioBitrate(192)
-                .on('error', (err) => {
-                    console.error('FFmpeg error:', err.message);
-                });
-
-            const pt = new stream.PassThrough();
-            command.pipe(pt);
-            pt.pipe(res, { end: true });
-
-            const fileStream = fs.createWriteStream(mp3Path);
-            pt.pipe(fileStream);
-
-            fs.writeFileSync(metaPath, JSON.stringify({
-                track: trackName,
-                artist: artistName,
-                videoUrl: videoUrl,
-                savedAt: new Date().toISOString()
-            }));
-
-            fileStream.on('error', () => {
-                if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
-            });
-        } catch (streamErr) {
-            console.error('ytdl-core audio extraction error:', streamErr.message);
-            if (!res.headersSent) {
-                res.status(500).json({ error: 'Failed to extract audio stream' });
-            }
-        }
+        audioStream.pipe(res);
 
     } catch (error) {
         console.error('Error in /play endpoint:', error);

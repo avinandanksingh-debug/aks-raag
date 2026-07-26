@@ -56,7 +56,15 @@ const Player = () => {
             
             audioRef.current.play()
                 .then(() => setIsPlaying(true))
-                .catch(e => console.error("[Player] Playback launch error:", e));
+                .catch(e => {
+                    console.error("[Player] Playback launch error:", e);
+                    // Retrying once if initial play gesture was interrupted
+                    setTimeout(() => {
+                        if (audioRef.current) {
+                            audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                        }
+                    }, 500);
+                });
 
             setDuration((currentTrack.duration_ms || 180000) / 1000);
             setCurrentTime(0);
@@ -128,7 +136,6 @@ const Player = () => {
         <div className="player-bar">
             <audio 
                 ref={audioRef}
-                crossOrigin="anonymous"
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}
             />

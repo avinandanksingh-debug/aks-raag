@@ -1,0 +1,231 @@
+[
+  {
+    "id": "yt-1",
+    "name": "Global Top 50",
+    "description": "The most played tracks around the world right now.",
+    "images": [{"url": "https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "JGwWNGJdvx8", "name": "Shape of You", "youtube_url": "https://youtube.com/watch?v=JGwWNGJdvx8", "duration_ms": 264000, "artists": [{"name": "Ed Sheeran"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg"}]}}},
+        {"track": {"id": "kJQP7kiw5Fk", "name": "Despacito", "youtube_url": "https://youtube.com/watch?v=kJQP7kiw5Fk", "duration_ms": 282000, "artists": [{"name": "Luis Fonsi ft. Daddy Yankee"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg"}]}}},
+        {"track": {"id": "09R8_2nJtjg", "name": "Sugar", "youtube_url": "https://youtube.com/watch?v=09R8_2nJtjg", "duration_ms": 235000, "artists": [{"name": "Maroon 5"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg"}]}}},
+        {"track": {"id": "fJ9rUzIMcZQ", "name": "Bohemian Rhapsody", "youtube_url": "https://youtube.com/watch?v=fJ9rUzIMcZQ", "duration_ms": 354000, "artists": [{"name": "Queen"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg"}]}}},
+        {"track": {"id": "OPf0YbXqDm0", "name": "Uptown Funk", "youtube_url": "https://youtube.com/watch?v=OPf0YbXqDm0", "duration_ms": 270000, "artists": [{"name": "Mark Ronson ft. Bruno Mars"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-2",
+    "name": "Viral Pop Hits",
+    "description": "Trending pop anthems updated daily.",
+    "images": [{"url": "https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "4NRXx6U8ABQ", "name": "Blinding Lights", "youtube_url": "https://youtube.com/watch?v=4NRXx6U8ABQ", "duration_ms": 200000, "artists": [{"name": "The Weeknd"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg"}]}}},
+        {"track": {"id": "hT_nvWreIhg", "name": "Counting Stars", "youtube_url": "https://youtube.com/watch?v=hT_nvWreIhg", "duration_ms": 257000, "artists": [{"name": "OneRepublic"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg"}]}}},
+        {"track": {"id": "YQHsXMglC9A", "name": "Hello", "youtube_url": "https://youtube.com/watch?v=YQHsXMglC9A", "duration_ms": 295000, "artists": [{"name": "Adele"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/YQHsXMglC9A/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-3",
+    "name": "Bollywood Top 50",
+    "description": "Top Hindi melodies and blockbuster hits.",
+    "images": [{"url": "https://i.ytimg.com/vi/vUCM_O1675U/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "vUCM_O1675U", "name": "Kesariya", "youtube_url": "https://youtube.com/watch?v=vUCM_O1675U", "duration_ms": 268000, "artists": [{"name": "Arijit Singh"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/vUCM_O1675U/hqdefault.jpg"}]}}},
+        {"track": {"id": "huxhqphtcA4", "name": "Apna Bana Le", "youtube_url": "https://youtube.com/watch?v=huxhqphtcA4", "duration_ms": 261000, "artists": [{"name": "Arijit Singh, Sachin-Jigar"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/huxhqphtcA4/hqdefault.jpg"}]}}},
+        {"track": {"id": "ATz5Awq2Pew", "name": "Tum Hi Ho", "youtube_url": "https://youtube.com/watch?v=ATz5Awq2Pew", "duration_ms": 262000, "artists": [{"name": "Arijit Singh"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/ATz5Awq2Pew/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-4",
+    "name": "Lofi Chill Beats",
+    "description": "Relaxing lo-fi beats for study and chill.",
+    "images": [{"url": "https://i.ytimg.com/vi/jfKfPfyJRdk/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "jfKfPfyJRdk", "name": "Lofi Hip Hop Radio - Beats to Relax/Study to", "youtube_url": "https://youtube.com/watch?v=jfKfPfyJRdk", "duration_ms": 1800000, "artists": [{"name": "Lofi Girl"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/jfKfPfyJRdk/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-5",
+    "name": "Top 100 EDM",
+    "description": "High energy Electronic Dance Music festival bangers.",
+    "images": [{"url": "https://i.ytimg.com/vi/IcrbM1l_BoI/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "IcrbM1l_BoI", "name": "Wake Me Up", "youtube_url": "https://youtube.com/watch?v=IcrbM1l_BoI", "duration_ms": 272000, "artists": [{"name": "Avicii"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/IcrbM1l_BoI/hqdefault.jpg"}]}}},
+        {"track": {"id": "ALZHF5UqnU4", "name": "Alone", "youtube_url": "https://youtube.com/watch?v=ALZHF5UqnU4", "duration_ms": 161000, "artists": [{"name": "Marshmello"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/ALZHF5UqnU4/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-6",
+    "name": "Best of 90s",
+    "description": "Nostalgic 90s pop and rock classics.",
+    "images": [{"url": "https://i.ytimg.com/vi/4fndeDfaWCg/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "4fndeDfaWCg", "name": "I Want It That Way", "youtube_url": "https://youtube.com/watch?v=4fndeDfaWCg", "duration_ms": 219000, "artists": [{"name": "Backstreet Boys"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/4fndeDfaWCg/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-7",
+    "name": "Rap Caviar",
+    "description": "Hottest hip hop and rap tracks.",
+    "images": [{"url": "https://i.ytimg.com/vi/uxpDa-c-4Mc/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "uxpDa-c-4Mc", "name": "Hotline Bling", "youtube_url": "https://youtube.com/watch?v=uxpDa-c-4Mc", "duration_ms": 267000, "artists": [{"name": "Drake"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/uxpDa-c-4Mc/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-8",
+    "name": "Acoustic Covers",
+    "description": "Mellow acoustic takes on famous songs.",
+    "images": [{"url": "https://i.ytimg.com/vi/hLQl3WQQoQ0/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "hLQl3WQQoQ0", "name": "Someone Like You", "youtube_url": "https://youtube.com/watch?v=hLQl3WQQoQ0", "duration_ms": 285000, "artists": [{"name": "Adele"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/hLQl3WQQoQ0/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-9",
+    "name": "Workout Motivation",
+    "description": "Pump-up music for gym and fitness sessions.",
+    "images": [{"url": "https://i.ytimg.com/vi/btPJPFnesV4/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "btPJPFnesV4", "name": "Eye of the Tiger", "youtube_url": "https://youtube.com/watch?v=btPJPFnesV4", "duration_ms": 245000, "artists": [{"name": "Survivor"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/btPJPFnesV4/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-10",
+    "name": "K-Pop Hits",
+    "description": "Top Korean pop tracks and music videos.",
+    "images": [{"url": "https://i.ytimg.com/vi/gdZLi9oWNZg/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "gdZLi9oWNZg", "name": "Dynamite", "youtube_url": "https://youtube.com/watch?v=gdZLi9oWNZg", "duration_ms": 224000, "artists": [{"name": "BTS"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/gdZLi9oWNZg/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-11",
+    "name": "Latin Hits",
+    "description": "Fiesta rhythms and Reggaeton hits.",
+    "images": [{"url": "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "kJQP7kiw5Fk", "name": "Despacito", "youtube_url": "https://youtube.com/watch?v=kJQP7kiw5Fk", "duration_ms": 282000, "artists": [{"name": "Luis Fonsi"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-12",
+    "name": "Indie Pop",
+    "description": "Fresh independent pop melodies.",
+    "images": [{"url": "https://i.ytimg.com/vi/2vJ7GJgAc8M/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "2vJ7GJgAc8M", "name": "Riptide", "youtube_url": "https://youtube.com/watch?v=2vJ7GJgAc8M", "duration_ms": 204000, "artists": [{"name": "Vance Joy"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/2vJ7GJgAc8M/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-13",
+    "name": "Classical Essentials",
+    "description": "Masterpieces from Mozart, Beethoven & Bach.",
+    "images": [{"url": "https://i.ytimg.com/vi/_4IRMYuE1hI/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "_4IRMYuE1hI", "name": "Für Elise", "youtube_url": "https://youtube.com/watch?v=_4IRMYuE1hI", "duration_ms": 180000, "artists": [{"name": "Ludwig van Beethoven"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/_4IRMYuE1hI/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-14",
+    "name": "R&B Classics",
+    "description": "Smooth R&B tunes and soulful vocals.",
+    "images": [{"url": "https://i.ytimg.com/vi/LjhCEhWiKXk/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "LjhCEhWiKXk", "name": "No One", "youtube_url": "https://youtube.com/watch?v=LjhCEhWiKXk", "duration_ms": 253000, "artists": [{"name": "Alicia Keys"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/LjhCEhWiKXk/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-15",
+    "name": "Bollywood Romantic",
+    "description": "Hearttouching Indian love songs.",
+    "images": [{"url": "https://i.ytimg.com/vi/284Ov7gajcA/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "284Ov7gajcA", "name": "Raataan Lambiyan", "youtube_url": "https://youtube.com/watch?v=284Ov7gajcA", "duration_ms": 230000, "artists": [{"name": "Jubin Nautiyal"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/284Ov7gajcA/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-16",
+    "name": "Gaming Music",
+    "description": "High octane tracks for battle sessions.",
+    "images": [{"url": "https://i.ytimg.com/vi/y6120QOlsfU/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "y6120QOlsfU", "name": "Sandstorm", "youtube_url": "https://youtube.com/watch?v=y6120QOlsfU", "duration_ms": 225000, "artists": [{"name": "Darude"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/y6120QOlsfU/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-17",
+    "name": "Focus Music",
+    "description": "Ambient soundscapes for deep focus and work.",
+    "images": [{"url": "https://i.ytimg.com/vi/WPni755-Krg/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "WPni755-Krg", "name": "Weightless", "youtube_url": "https://youtube.com/watch?v=WPni755-Krg", "duration_ms": 480000, "artists": [{"name": "Marconi Union"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/WPni755-Krg/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-18",
+    "name": "Country Hits",
+    "description": "Heartland acoustic & country anthems.",
+    "images": [{"url": "https://i.ytimg.com/vi/1VRZq3J8Enc/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "1VRZq3J8Enc", "name": "Take Me Home, Country Roads", "youtube_url": "https://youtube.com/watch?v=1VRZq3J8Enc", "duration_ms": 190000, "artists": [{"name": "John Denver"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/1VRZq3J8Enc/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-19",
+    "name": "Best of 2000s",
+    "description": "Memorable hits from 2000 - 2010.",
+    "images": [{"url": "https://i.ytimg.com/vi/gOMhN-hfIyY/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "gOMhN-hfIyY", "name": "In the End", "youtube_url": "https://youtube.com/watch?v=gOMhN-hfIyY", "duration_ms": 216000, "artists": [{"name": "Linkin Park"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/gOMhN-hfIyY/hqdefault.jpg"}]}}}
+      ]
+    }
+  },
+  {
+    "id": "yt-20",
+    "name": "Viral TikTok",
+    "description": "Sounds and tracks trending across social media.",
+    "images": [{"url": "https://i.ytimg.com/vi/TUVcZfQe-Kw/hqdefault.jpg"}],
+    "tracks": {
+      "items": [
+        {"track": {"id": "TUVcZfQe-Kw", "name": "Levitating", "youtube_url": "https://youtube.com/watch?v=TUVcZfQe-Kw", "duration_ms": 203000, "artists": [{"name": "Dua Lipa"}], "album": {"images": [{"url": "https://i.ytimg.com/vi/TUVcZfQe-Kw/hqdefault.jpg"}]}}}
+      ]
+    }
+  }
+]

@@ -57,7 +57,7 @@ router.delete('/cache', (req, res) => {
 });
 
 router.get('/play', async (req, res) => {
-    // CORS headers for Android WebView HTML5 Audio compatibility
+    // Full CORS headers on all stream responses
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Authorization');
@@ -71,7 +71,6 @@ router.get('/play', async (req, res) => {
     try {
         let videoUrl = url;
 
-        // Step 1: If no direct YouTube URL, search for the track (fast, ~2-3s)
         if (!videoUrl) {
             const searchQuery = `${track} ${artist} official audio`;
             console.log(`[Stream] Searching YouTube for: ${searchQuery}`);
@@ -87,7 +86,6 @@ router.get('/play', async (req, res) => {
         const hash = crypto.createHash('md5').update(videoUrl).digest('hex');
         const mp3Path = path.join(getCacheDir(), `${hash}.mp3`);
 
-        // Step 2: Check cache — serve from local file if available (instant)
         if (fs.existsSync(mp3Path)) {
             console.log(`[Stream Cache Hit] ${videoUrl}`);
             const stat = fs.statSync(mp3Path);
@@ -116,20 +114,20 @@ router.get('/play', async (req, res) => {
             return;
         }
 
-        // Step 3: IMMEDIATELY start piping audio via ytdl() stream.
-        // This sends Content-Type headers within <1 second, keeping the connection alive.
-        // No getInfo() call — ytdl() handles resolution internally.
-        console.log(`[Stream Pipe] Streaming directly via ytdl: ${videoUrl}`);
+        // Fast Audio Stream Pipe with immediate 200 OK headers
+        console.log(`[Stream Pipe] Piping audio for: ${videoUrl}`);
 
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Transfer-Encoding', 'chunked');
-        res.setHeader('Accept-Ranges', 'none');
-        res.setHeader('Cache-Control', 'no-cache');
+        res.writeHead(200, {
+            'Content-Type': 'audio/mpeg',
+            'Transfer-Encoding': 'chunked',
+            'Accept-Ranges': 'none',
+            'Cache-Control': 'no-cache'
+        });
 
         const audioStream = ytdl(videoUrl, {
             filter: 'audioonly',
             quality: 'highestaudio',
-            highWaterMark: 1 << 25, // 32MB buffer for smooth streaming
+            highWaterMark: 1 << 25,
         });
 
         audioStream.on('error', (err) => {

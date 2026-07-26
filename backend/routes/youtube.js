@@ -54,7 +54,17 @@ router.get('/featured-playlists', async (req, res) => {
             { id: 'yt-7', name: 'Rap Caviar', query: 'Rap Caviar top hits' },
             { id: 'yt-8', name: 'Acoustic Covers', query: 'Best acoustic covers' },
             { id: 'yt-9', name: 'Workout Motivation', query: 'Workout music mix' },
-            { id: 'yt-10', name: 'K-Pop Hits', query: 'K-Pop top songs 2026' }
+            { id: 'yt-10', name: 'K-Pop Hits', query: 'K-Pop top songs 2026' },
+            { id: 'yt-11', name: 'Latin Hits', query: 'Latin hits top Reggaeton' },
+            { id: 'yt-12', name: 'Indie Pop', query: 'Indie pop top hits' },
+            { id: 'yt-13', name: 'Classical Essentials', query: 'Classical music essentials' },
+            { id: 'yt-14', name: 'R&B Classics', query: 'Best R&B classics' },
+            { id: 'yt-15', name: 'Bollywood Romantic', query: 'Bollywood romantic hits' },
+            { id: 'yt-16', name: 'Gaming Music', query: 'Gaming music EDM dubstep' },
+            { id: 'yt-17', name: 'Focus Music', query: 'Deep focus study music' },
+            { id: 'yt-18', name: 'Country Hits', query: 'Country top hits 2026' },
+            { id: 'yt-19', name: 'Best of 2000s', query: '2000s throwback hits' },
+            { id: 'yt-20', name: 'Viral TikTok', query: 'Viral TikTok songs' }
         ];
 
         const playlists = [];

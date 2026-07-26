@@ -46,13 +46,14 @@ const Player = () => {
                 streamUrl = `${getApiBase()}/api/stream/play?track=${encodeURIComponent(currentTrack.name)}&artist=${encodeURIComponent(currentTrack.artists?.[0]?.name || 'Unknown')}`;
             }
             
-            if (audioRef.current.src !== streamUrl) {
-                audioRef.current.src = streamUrl;
-                audioRef.current.volume = volume;
-                audioRef.current.play().catch(e => console.error("Playback launch catch:", e));
-            }
+            console.log(`[Player] Loading audio stream: ${streamUrl}`);
+            audioRef.current.src = streamUrl;
+            audioRef.current.volume = volume;
             
-            setIsPlaying(true);
+            audioRef.current.play()
+                .then(() => setIsPlaying(true))
+                .catch(e => console.error("[Player] Playback launch error:", e));
+
             setDuration((currentTrack.duration_ms || 180000) / 1000);
             setCurrentTime(0);
         }
@@ -61,7 +62,7 @@ const Player = () => {
     useEffect(() => {
         if (audioRef.current) {
             if (isPlaying) {
-                audioRef.current.play().catch(e => console.error("Playback toggle catch:", e));
+                audioRef.current.play().catch(e => console.error("[Player] Playback toggle error:", e));
             } else {
                 audioRef.current.pause();
             }

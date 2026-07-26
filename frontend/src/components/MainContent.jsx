@@ -18,7 +18,7 @@ const MainContent = () => {
     // Featured playlists state
     const [youtubeFeatured, setYoutubeFeatured] = useState([]);
 
-    // Fetch featured playlists on mount
+    // Fetch 20 YouTube Music Featured Playlists on mount
     useEffect(() => {
         const loadFeatured = async () => {
             try {
@@ -50,7 +50,7 @@ const MainContent = () => {
                             });
                             items = res.data.items || [];
                         } catch (err) {
-                            console.warn("Direct Spotify API failed for liked songs, using backend fallback:", err.message);
+                            console.warn("Direct Spotify API failed for liked songs, using backend proxy:", err.message);
                         }
                     }
                     if (items.length === 0) {
@@ -60,26 +60,17 @@ const MainContent = () => {
                         }).catch(() => ({ data: {} }));
                         items = res.data.items || [];
                     }
-
-                    // Fallback to YouTube top songs search if Spotify liked songs are empty
-                    if (items.length === 0) {
-                        try {
-                            const ytRes = await axios.get(`${getApiBase()}/api/youtube/search?q=top%20hit%20songs%202026`);
-                            items = (ytRes.data.results || []).map(t => ({ track: t }));
-                        } catch (e) {}
-                    }
-
                     setTracks(items);
                 } else if (activeView.type === 'playlist' && activeView.id) {
                     let items = [];
-                    // 1. YouTube Featured Playlists
+                    // 1. YouTube Featured Playlist
                     if (activeView.id.startsWith('yt-')) {
                         const featuredPl = youtubeFeatured.find(p => p.id === activeView.id);
                         if (featuredPl) {
                             items = featuredPl.tracks?.items || [];
                         }
                     } else {
-                        // 2. Direct Spotify API
+                        // 2. Spotify User Playlist Tracks (Direct Spotify API)
                         if (directToken) {
                             try {
                                 const res = await axios.get(`https://api.spotify.com/v1/playlists/${activeView.id}/tracks?limit=50`, {
@@ -87,27 +78,16 @@ const MainContent = () => {
                                 });
                                 items = res.data.items || [];
                             } catch (err) {
-                                console.warn("Direct Spotify API failed for playlist, using backend proxy:", err.message);
+                                console.warn("Direct Spotify API failed for playlist tracks, attempting backend proxy:", err.message);
                             }
                         }
-                        // 3. Backend Proxy
+                        // 3. Spotify User Playlist Tracks (Backend Proxy)
                         if (items.length === 0) {
                             const res = await axios.get(`${getApiBase()}/api/spotify/playlists/${activeView.id}/tracks`, { 
                                 withCredentials: true,
                                 headers: directToken ? { Authorization: `Bearer ${directToken}` } : {}
                             }).catch(() => ({ data: {} }));
                             items = res.data.items || [];
-                        }
-                    }
-
-                    // 4. Guaranteed 100% Track Fallback via YouTube Search
-                    if (items.length === 0 && activeView.name) {
-                        console.log(`[Playlist Fallback] Fetching YouTube tracks for playlist: ${activeView.name}`);
-                        try {
-                            const ytRes = await axios.get(`${getApiBase()}/api/youtube/search?q=${encodeURIComponent(activeView.name + ' playlist songs')}`);
-                            items = (ytRes.data.results || []).map(t => ({ track: t }));
-                        } catch (e) {
-                            console.error("YouTube playlist fallback search failed:", e);
                         }
                     }
 
@@ -249,17 +229,17 @@ const MainContent = () => {
                                             )}
                                         </div>
                                         <h4 className="playlist-card-name">{pl.name}</h4>
-                                        <p className="playlist-card-tracks">{pl.tracks?.total || 20} Tracks</p>
+                                        <p className="playlist-card-tracks">{pl.tracks?.total || 0} Tracks</p>
                                     </div>
                                 ))}
                             </div>
                         </>
                     )}
 
-                    {/* Featured Music Playlists */}
-                    <h2 className="library-section-title" style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* 20 Featured Music Playlists from YouTube/YouTube Music */}
+                    <h2 className="library-section-title" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Sparkles size={20} color="#1ed760" />
-                        <span>Featured Playlists</span>
+                        <span>20 Featured Playlists (YouTube Music)</span>
                     </h2>
                     <div className="playlist-grid">
                         {youtubeFeatured.length > 0 ? (
@@ -279,11 +259,11 @@ const MainContent = () => {
                                         )}
                                     </div>
                                     <h4 className="playlist-card-name">{pl.name}</h4>
-                                    <p className="playlist-card-tracks">Featured Music</p>
+                                    <p className="playlist-card-tracks">Featured Collection</p>
                                 </div>
                             ))
                         ) : (
-                            <div style={{ color: 'var(--text-secondary)', padding: '12px' }}>Loading featured music playlists...</div>
+                            <div style={{ color: 'var(--text-secondary)', padding: '12px' }}>Loading 20 featured music playlists...</div>
                         )}
                     </div>
                 </div>

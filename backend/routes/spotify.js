@@ -70,8 +70,16 @@ router.get('/playlists/:playlist_id/tracks', async (req, res) => {
         });
         res.json(response.data);
     } catch (error) {
-        console.error('Error fetching playlist tracks:', error.response?.data || error.message);
-        res.status(error.response?.status || 500).json(error.response?.data || { error: 'Failed to fetch playlist tracks' });
+        // Secondary fallback to fetch full playlist object
+        try {
+            const fullPl = await axios.get(`${SPOTIFY_API_BASE}/playlists/${req.params.playlist_id}`, {
+                headers: { 'Authorization': `Bearer ${req.token}` }
+            });
+            return res.json(fullPl.data.tracks || { items: [] });
+        } catch (e2) {
+            console.error('Error fetching playlist tracks:', error.response?.data || error.message);
+            res.status(error.response?.status || 500).json(error.response?.data || { error: 'Failed to fetch playlist tracks' });
+        }
     }
 });
 
